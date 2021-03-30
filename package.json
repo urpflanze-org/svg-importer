@@ -1,5 +1,5 @@
 {
-	"name": "@urpflanze/[name]",
+	"name": "@urpflanze/svg-importer",
 	"version": "0.0.1",
 	"description": "Urpflanze package",
 	"license": "GPL-3.0-or-later",
@@ -12,10 +12,10 @@
 	"homepage": "",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/urpflanze-org/[name].git"
+		"url": "https://github.com/urpflanze-org/svg-importer.git"
 	},
 	"bugs": {
-		"url": "https://github.com/urpflanze-org/[name]/issues",
+		"url": "https://github.com/urpflanze-org/svg-importer/issues",
 		"email": "gennaro.bs@gmail.com"
 	},
 	"funding": [
@@ -43,18 +43,30 @@
 	"scripts": {
 		"build": "tsc",
 		"watch": "tsc --watch",
+		"test": "tap",
 		"lint": "eslint src --ext .ts",
-		"prepublishOnly": "npm run build",
-		"generate-docs": "npx generate-docs"
+		"prepublishOnly": "npm run build"
 	},
 	"publishConfig": {},
-	"dependencies": {},
+	"dependencies": {
+		"@svgdotjs/svg.js": "^3.0.16",
+		"@types/jsdom": "^16.2.9",
+		"@types/xmldom": "^0.1.30",
+		"@urpflanze/color": "0.0.2",
+		"jsdom": "^16.5.2",
+		"simplify-js": "^1.2.4",
+		"svg-path-properties": "^1.0.11",
+		"svgdom": "^0.1.8",
+		"svgpath": "^2.3.1",
+		"transformation-matrix": "^2.7.0"
+	},
 	"devDependencies": {
+		"@types/tap": "^14.10.3",
 		"@typescript-eslint/eslint-plugin": "^4.16.1",
-		"@urpflanze/typedoc-docs": "^0.1.13",
+		"@urpflanze/core": "^0.4.6",
 		"eslint": "^7.21.0",
 		"eslint-config-prettier": "^8.1.0",
+		"tap": "^14.11.0",
 		"typescript": "4.2"
-	},
-	"googleAnalyticsID": ""
+	}
 }
