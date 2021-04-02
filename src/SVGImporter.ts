@@ -1,18 +1,16 @@
 import { fromTransformAttribute, fromDefinition, compose, toSVG } from 'transformation-matrix'
 import simplify from 'simplify-js'
 import * as svgpath from 'svgpath'
-// import { JSDOM } from 'jsdom'
-// import { svgPathProperties } from 'svg-path-properties'
-
+import { JSDOM } from 'jsdom'
+import { Path, registerWindow, SVG } from '@svgdotjs/svg.js'
 import { createSVGWindow } from 'svgdom'
-import { SVG, Path, registerWindow, Matrix } from '@svgdotjs/svg.js'
 
-import { Scene, Shape, ShapeBuffer, Group } from '@urpflanze/core'
+import { Shape, ShapeBuffer, Group, Vec2 } from '@urpflanze/core'
 import { parseColor } from '@urpflanze/color'
 
 import { ISVGParsedPath, ISVGParsed, ISVGElementConversion, ISVGDrawer } from './types'
 import { conversion, fromPercentage } from './utilities'
-import { EAdaptMode, IPropArguments, IShapeBounding } from '@urpflanze/core/dist/types'
+import { IPropArguments } from '@urpflanze/core/dist/types'
 
 /**
  *
@@ -51,28 +49,21 @@ class SVGImporter {
 	}
 
 	/**
-	 * Convert string to SVGElement
+	 * Convert string to SVGSVGElement
 	 *
 	 * @static
 	 * @param {string} input
-	 * @returns {(SVGElement | null)}
+	 * @returns {(SVGSVGElement | null)}
 	 */
-	static stringToSVG(input: string): SVGElement | null {
+	static stringToSVG(input: string): SVGSVGElement | null {
 		input = input.trim()
 		if (!SVGImporter.isSVG(input)) {
 			console.warn('[Urpflanze:SVGImport] | Input is not valid SVG string', input)
 			return null
 		}
 
-		const window = createSVGWindow()
-		const document = window.document
-
-		registerWindow(window, document)
-
-		const svg = SVG(document.documentElement)
-		svg.svg(input)
-
-		return svg.node.firstChild as SVGElement
+		const doc = new JSDOM(input).window.document
+		return doc.body.firstChild as SVGSVGElement
 	}
 
 	/**
@@ -81,18 +72,19 @@ class SVGImporter {
 	 * @static
 	 * @param {string} input
 	 * @param {number} [simplify=0.01]
+	 * @param {number} [sideLength]
 	 * @returns {(Shape | ShapeBuffer | null)}
 	 */
-	static parse(input: string, simplify = 0.01): Shape | ShapeBuffer | null {
+	static parse(input: string, simplify = 0.01, sideLength?: number): Shape | ShapeBuffer | null {
 		if (SVGImporter.isSVG(input) === false) {
 			console.warn('[Urpflanze:SVGImport] | Input is not valid svg', input)
 			return null
 		}
 
-		const parsed = SVGImporter.SVGStringToBuffers(input, simplify)
+		const parsed = SVGImporter.svgToBuffers(input, simplify)
 
 		if (parsed) {
-			return SVGImporter.parsedToShape(parsed)
+			return SVGImporter.parsedToShape(parsed, sideLength)
 		}
 
 		return null
@@ -103,15 +95,17 @@ class SVGImporter {
 	 *
 	 * @static
 	 * @param {ISVGParsed} parsed
+	 * @param {number} sideLength
 	 * @returns {(Shape | ShapeBuffer | null)}
 	 */
-	static parsedToShape(parsed: ISVGParsed): Shape | ShapeBuffer | null {
-		const shapes: Array<ShapeBuffer> = new Array()
+	static parsedToShape(parsed: ISVGParsed, sideLength?: number): Shape | ShapeBuffer | null {
+		const shapes: Array<ShapeBuffer> = []
 
 		parsed.buffers.forEach((buffer, i) => {
 			const sb = new ShapeBuffer<IPropArguments, ISVGDrawer>({
 				shape: buffer.buffer,
 				bClosed: buffer.bClosed,
+				sideLength,
 				drawer: buffer.drawer,
 			})
 			sb && shapes.push(sb)
@@ -132,8 +126,8 @@ class SVGImporter {
 	 * @param {number} [simplify=0.01]
 	 * @returns {(ISVGParsed | null)}
 	 */
-	static SVGStringToBuffers(input: string, simplify = 0.01): ISVGParsed | null {
-		const svg: SVGElement | null = SVGImporter.stringToSVG(input)
+	static svgToBuffers(input: SVGSVGElement | string, simplify = 0.01): ISVGParsed | null {
+		const svg: SVGSVGElement | null = typeof input === 'string' ? SVGImporter.stringToSVG(input) : input
 
 		if (svg === null) {
 			console.error('[Urpflanze:SVGImport] | Cannot convert string to svg', input)
@@ -166,13 +160,25 @@ class SVGImporter {
 			.map(path => SVGImporter.pathToBuffer(path, steps, viewBox))
 			.filter(b => !!b && b.length >= 2) as Array<Float32Array>
 
-		// Simplify anda adapt buffers
+		// Simplify and adapt buffers
 		buffers = buffers.map(buffer => SVGImporter.simpliyBuffer(buffer, simplify))
 
+		// remove last point if shape is closed
+		buffers = buffers.map((buffer, index) => {
+			const bClosed = SVGImporter.pathIsClosed(paths[index])
+			if (bClosed) {
+				const distance = Vec2.distance([buffer[0], buffer[1]], [buffer[buffer.length - 2], buffer[buffer.length - 1]])
+				if (distance < 1) return buffer.subarray(0, buffer.length - 2)
+			}
+
+			return buffer
+		})
+
 		// Generate result
+		const h = Math.sqrt((viewBox[2] - viewBox[0]) * (viewBox[3] - viewBox[1]))
 		const svgFill = SVGImporter.getStyleAttr('fill', svg)
 		const svgStroke = SVGImporter.getStyleAttr('stroke', svg)
-		const svgLineWidth = SVGImporter.getStyleAttr('stroke-width', svg)
+		const svgLineWidth = SVGImporter.getStyleAttr('stroke-width', svg, h / 100)
 
 		const result: Array<ISVGParsedPath> = []
 		for (let i = 0; i < buffers.length; i++) {
@@ -181,25 +187,16 @@ class SVGImporter {
 
 			if (templineWidth) {
 				strokeWidth =
-					templineWidth.indexOf('%') >= 0
-						? fromPercentage(
-								parseFloat(templineWidth),
-								Math.sqrt((viewBox[2] - viewBox[0]) * (viewBox[3] - viewBox[1]))
-						  )
-						: parseFloat(templineWidth)
+					templineWidth.indexOf('%') >= 0 ? fromPercentage(parseFloat(templineWidth), h) : parseFloat(templineWidth)
 			}
 
-			const fill = SVGImporter.getStyleAttr('fill', paths[i], svgFill ? svgFill : undefined)
-			const stroke = SVGImporter.getStyleAttr('stroke', paths[i], fill ? undefined : svgStroke || 'rgba(0,0,0,0)')
-			const lineWidth = strokeWidth
-				? strokeWidth
-				: stroke
-				? svgLineWidth
-					? parseFloat(svgLineWidth)
-					: 1
-				: svgLineWidth
-				? parseFloat(svgLineWidth)
-				: undefined
+			const fill = SVGImporter.getStyleAttr('fill', paths[i], svgFill ? svgFill : undefined) as string | undefined
+			const stroke = SVGImporter.getStyleAttr(
+				'stroke',
+				paths[i],
+				fill ? undefined : svgStroke || 'rgba(255,255,255)'
+			) as string | undefined
+			const lineWidth = (strokeWidth ? strokeWidth : stroke ? svgLineWidth : undefined) as number | undefined
 
 			result.push({
 				buffer: buffers[i],
@@ -207,7 +204,7 @@ class SVGImporter {
 				drawer: {
 					fill,
 					stroke,
-					lineWidth,
+					lineWidth: lineWidth ? lineWidth / (h / 100) : undefined,
 				},
 			})
 		}
@@ -229,28 +226,28 @@ class SVGImporter {
 	private static getStyleAttr(
 		name: 'fill' | 'stroke' | 'stroke-width',
 		element: SVGElement,
-		defaultColor?: string
-	): string | undefined {
+		defaultValue?: string | number
+	): string | number | undefined {
 		// get color from attribute
+		const attr = element.getAttribute(name)
+		if (attr === 'none') return undefined
 
-		const value = element.getAttribute(name)
-
-		if (value === 'none') return undefined
-
-		let color: string | undefined
-		if (typeof value !== 'undefined' && value !== null) {
-			color = value
+		let value: string | undefined
+		if (typeof attr !== 'undefined' && attr !== null) {
+			value = attr
 		} else {
 			// otherwise get color from style
 			const styleName: 'fill' | 'stroke' | 'strokeWidth' = name === 'stroke-width' ? 'strokeWidth' : name
 			if (typeof element.style[styleName] !== 'undefined' && element.style[styleName].length > 0) {
-				color = element.style[styleName]
+				value = element.style[styleName]
 			}
 		}
 
-		if (typeof color === 'undefined') return defaultColor
+		if (typeof value === 'undefined') return defaultValue
 
-		let alpha = 1
+		if (name === 'stroke-width') return parseFloat(value)
+
+		let alpha = parseFloat(element.getAttribute('opacity') || '1')
 
 		// check opacity in style
 		const style = element.getAttribute('style')
@@ -262,7 +259,7 @@ class SVGImporter {
 			}
 		}
 
-		const parsed = parseColor(color)
+		const parsed = parseColor(value)
 		if (parsed) {
 			alpha = parsed.alpha !== 1 ? parsed.alpha : alpha
 
@@ -271,7 +268,7 @@ class SVGImporter {
 				: `hsla(${parsed.a}, ${parsed.b}%, ${parsed.c}%, ${alpha})`
 		}
 
-		return defaultColor
+		return defaultValue
 	}
 
 	/**
@@ -292,12 +289,10 @@ class SVGImporter {
 		// Check width and height if viewBox is not setted
 		const width = svg.getAttribute('width')
 		const height = svg.getAttribute('height')
-		if (width && height) {
-			return [0, 0, parseFloat(width), parseFloat(height)]
-		}
 
-		// Calculate dimension by elements
-		svg = svg.cloneNode(true) as SVGElement
+		if (width && height) return [0, 0, parseFloat(width), parseFloat(height)]
+
+		svg = svg.cloneNode(true) as SVGSVGElement
 
 		const elements: Array<SVGElement> = Array.from(
 			svg.querySelectorAll('rect, circle, ellipse, line, polyline, polygon, path')
@@ -305,27 +300,24 @@ class SVGImporter {
 
 		const paths: Array<SVGPathElement> = ([] as Array<SVGPathElement>).concat.apply(
 			[],
-			elements.map(e => SVGImporter.elementToPath(e as SVGElement))
+			elements.map(SVGImporter.elementToPath)
 		)
-		if (paths.length > 0) {
-			let width = 0,
-				height = 0
 
-			for (let i = 0, len = paths.length; i < len; i++) {
-				const buffer = SVGImporter.pathToBuffer(paths[i], 1)
-				if (buffer) {
-					const box = ShapeBuffer.getBounding(buffer)
-					box.width += box.x
-					box.height += box.y
-					if (box.width > width) width = box.width
-					if (box.height > height) height = box.height
-				}
+		let c_width = 0,
+			c_height = 0
+
+		for (let i = 0, len = paths.length; i < len; i++) {
+			const buffer = SVGImporter.pathToBuffer(paths[i], 1)
+			if (buffer) {
+				const box = ShapeBuffer.getBounding(buffer)
+				box.width += box.x
+				box.height += box.y
+				if (box.width > c_width) c_width = box.width
+				if (box.height > c_height) c_height = box.height
 			}
-
-			return [0, 0, width, height]
 		}
 
-		return [-1, -1, 1, 1]
+		return [0, 0, c_width, c_height]
 	}
 
 	/**
@@ -363,6 +355,21 @@ class SVGImporter {
 	}
 
 	/**
+	 * Transform path to absolute and apply transformation if exist
+	 *
+	 * @param path
+	 * @param transform
+	 * @returns
+	 */
+	private static sanitizePath(path: string, transform?: string): string {
+		return svgpath(path)
+			.abs()
+			.unarc()
+			.transform(transform || '')
+			.toString()
+	}
+
+	/**
 	 * Convert path to buffer between [-1, 1]
 	 *
 	 * @static
@@ -377,45 +384,17 @@ class SVGImporter {
 
 		const r = 2 / Math.max(width, height)
 
-		const originalPathD = path.getAttribute('d') || ''
-
-		// Apply transform matrix to path
-		const transform = path.getAttribute('transform') || ''
-		let matrix = [1, 0, 0, 0, 1, 0]
-		if (transform.length > 0) {
-			const transformMatrix = compose(fromDefinition(fromTransformAttribute(transform)))
-
-			matrix = [
-				transformMatrix.a,
-				transformMatrix.b,
-				transformMatrix.c,
-				transformMatrix.d,
-				transformMatrix.e,
-				transformMatrix.f,
-			]
-		}
-
 		// create path
-		// const document = createSVGWindow().document
-		// const transformedPathD = svgpath(originalPathD).matrix(matrix).toString()
-		// const transformedPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-		// transformedPath.setAttribute('d', transformedPathD)
+		const window = createSVGWindow()
+		const document = window.document
+		registerWindow(window, document)
 
-		// const path_length = Math.floor(transformedPath.getTotalLength())
-		// const buffer_length = Math.floor(path_length / steps) * 2
+		const originalPathD = path.getAttribute('d') as string
+		const transform = path.getAttribute('transform') || ''
 
-		// // Generate buffer
-		// const buffer = new Float32Array(buffer_length)
-		// for (let i = 0, j = 0; i < path_length; i += steps, j += 2) {
-		// 	const { x, y } = transformedPath.getPointAtLength(i) as { x: number; y: number }
+		// apply transform to path
+		const transformedPath = new Path({ d: SVGImporter.sanitizePath(originalPathD, transform) })
 
-		// 	buffer[j] = r * (x - width / 2)
-		// 	buffer[j + 1] = r * (y - height / 2)
-		// }
-
-		// return buffer
-
-		const transformedPath = new Path({ d: originalPathD }).transform(matrix)
 		const path_length = Math.floor(transformedPath.length())
 		const buffer_length = Math.floor(path_length / steps) * 2
 
@@ -423,13 +402,11 @@ class SVGImporter {
 		const buffer = new Float32Array(buffer_length)
 		let j = 0
 		for (let i = 0; i < path_length; i += steps) {
-			try {
-				const { x, y } = transformedPath.pointAt(i) as { x: number; y: number }
+			const { x, y } = transformedPath.pointAt(i) as { x: number; y: number }
 
-				buffer[j] = r * (x - width / 2)
-				buffer[j + 1] = r * (y - height / 2)
-				j += 2
-			} catch (e) {}
+			buffer[j] = r * (x - width / 2)
+			buffer[j + 1] = r * (y - height / 2)
+			j += 2
 		}
 
 		return buffer.subarray(0, j)
@@ -453,15 +430,18 @@ class SVGImporter {
 				let transform = child.getAttribute('transform')
 				if (transform && transform.length > 0) {
 					const matrix = compose(fromDefinition(fromTransformAttribute(transform)))
-					const finalMatrix = compose(matrix, gMatrix)
+					const finalMatrix = compose(gMatrix, matrix)
+
 					transform = toSVG(finalMatrix)
+				} else {
+					transform = gTransform
 				}
 
-				child.setAttribute('transform', gTransform)
+				child.setAttribute('transform', transform)
 			})
 		}
 
-		const attrs = ['fill', 'stroke', 'stroke-width']
+		const attrs = ['fill', 'stroke', 'stroke-width', 'style']
 
 		attrs.forEach(attr => {
 			const value = g.getAttribute(attr)
@@ -483,52 +463,42 @@ class SVGImporter {
 	 * @returns {Array<SVGPathElement>}
 	 */
 	static elementToPath(element: SVGElement): Array<SVGPathElement> {
-		const transform = element.getAttribute('transform') || ''
-		const fill = SVGImporter.getStyleAttr('fill', element, undefined)
-		const stroke = SVGImporter.getStyleAttr('stroke', element, undefined)
-		const lineWidth = SVGImporter.getStyleAttr('stroke-width', element, undefined)
+		// const window = createSVGWindow()
+		const document = new JSDOM('').window.document
 
-		const window = createSVGWindow()
-		const document = window.document
-		if (element.nodeName == 'path') {
+		let paths: Array<string> = []
+
+		if (element.nodeName === 'path') {
 			// Separate multiple path
-			const d: string | null = element.getAttribute('d') || ''
-
-			const result = svgpath(d)
+			paths = svgpath(element.getAttribute('d') || '')
 				.abs()
 				.unarc()
 				.toString()
 				.split('M')
 				.filter((e: string) => e.length > 0)
 				.map((e: string) => 'M' + e)
-
-			return result.map((d: string) => {
-				const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-				path.setAttribute('d', d)
-				path.setAttribute('transform', transform)
-				path.setAttribute('style', element.getAttribute('style'))
-				fill && path.setAttribute('fill', fill)
-				stroke && path.setAttribute('stroke', stroke)
-				lineWidth && path.setAttribute('lineWidth', lineWidth)
-				return path
-			})
-		}
-
-		const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-		const nodeName = element.nodeName
-		if (['rect', 'ellipse', 'circle', 'line', 'polyline', 'polygon'].includes(nodeName)) {
-			const d = conversion[nodeName as keyof ISVGElementConversion](element as any)
-			path.setAttribute('d', svgpath(d).abs().unarc().toString())
-			path.setAttribute('transform', transform)
-			path.setAttribute('style', element.getAttribute('style'))
-			fill && path.setAttribute('fill', fill)
-			stroke && path.setAttribute('stroke', stroke)
-			lineWidth && path.setAttribute('lineWidth', lineWidth)
-			return [path]
+		} else if (['rect', 'ellipse', 'circle', 'line', 'polyline', 'polygon'].includes(element.nodeName)) {
+			paths = [conversion[element.nodeName as keyof ISVGElementConversion](element as any)]
 		} else {
-			console.warn(`[Urpflanze:SVGImport] | Cannot convert ${nodeName} to path`)
-			return []
+			console.warn(`[Urpflanze:SVGImport] | Cannot convert ${element.nodeName} to path`)
 		}
+
+		return paths.map(d => {
+			const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+
+			if (element.nodeName === 'rect') {
+				console.log('rect', element.getAttribute('transform'))
+			}
+			path.setAttribute('d', d)
+			path.setAttribute('transform', element.getAttribute('transform') || '')
+			path.setAttribute('style', element.getAttribute('style') || '')
+			path.setAttribute('fill', SVGImporter.getStyleAttr('fill', element, '') + '')
+			path.setAttribute('stroke', SVGImporter.getStyleAttr('stroke', element, '') + '')
+			path.setAttribute('opacity', element.getAttribute('opacity') || '1')
+			path.setAttribute('stroke-width', SVGImporter.getStyleAttr('stroke-width', element, '') + '')
+
+			return path
+		})
 	}
 }
 
