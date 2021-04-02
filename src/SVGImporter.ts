@@ -2,7 +2,7 @@ import { fromTransformAttribute, fromDefinition, compose, toSVG } from 'transfor
 import simplify from 'simplify-js'
 import * as svgpath from 'svgpath'
 import { JSDOM } from 'jsdom'
-import { Path, registerWindow, SVG } from '@svgdotjs/svg.js'
+import { Path, registerWindow } from '@svgdotjs/svg.js'
 import { createSVGWindow } from 'svgdom'
 
 import { Shape, ShapeBuffer, Group, Vec2 } from '@urpflanze/core'
