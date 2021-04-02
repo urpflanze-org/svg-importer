@@ -3,13 +3,14 @@
 	"version": "0.0.1",
 	"description": "Urpflanze package",
 	"license": "GPL-3.0-or-later",
-	"docs": "",
+	"docs": "https://github.com/urpflanze-org/svg-importer/blob/master/README.md",
 	"keywords": [
 		"urpflanze",
+		"svg",
 		"typescript"
 	],
-	"author": "",
-	"homepage": "",
+	"author": "Gennaro Bosone <gennaro.bs@gmail.com>",
+	"homepage": "https://github.com/urpflanze-org/svg-importer",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/urpflanze-org/svg-importer.git"
@@ -51,11 +52,8 @@
 	"dependencies": {
 		"@svgdotjs/svg.js": "^3.0.16",
 		"@types/jsdom": "^16.2.9",
-		"@types/xmldom": "^0.1.30",
-		"@urpflanze/color": "0.0.2",
 		"jsdom": "^16.5.2",
 		"simplify-js": "^1.2.4",
-		"svg-path-properties": "^1.0.11",
 		"svgdom": "^0.1.8",
 		"svgpath": "^2.3.1",
 		"transformation-matrix": "^2.7.0"
@@ -63,10 +61,13 @@
 	"devDependencies": {
 		"@types/tap": "^14.10.3",
 		"@typescript-eslint/eslint-plugin": "^4.16.1",
-		"@urpflanze/core": "^0.4.6",
 		"eslint": "^7.21.0",
 		"eslint-config-prettier": "^8.1.0",
 		"tap": "^14.11.0",
 		"typescript": "4.2"
+	},
+	"peerDependencies": {
+		"@urpflanze/color": "0.0.3",
+		"@urpflanze/core": "^0.4.6"
 	}
 }
