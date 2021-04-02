@@ -1,5 +1,5 @@
 import { IDrawerProps } from '@urpflanze/core'
-import { IPropArguments, TDrawerProp } from '@urpflanze/core/dist/types'
+import { IPropArguments } from '@urpflanze/core/dist/types'
 
 /**
  *
