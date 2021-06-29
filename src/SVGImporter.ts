@@ -1,16 +1,16 @@
-import { fromTransformAttribute, fromDefinition, compose, toSVG } from 'transformation-matrix'
-import simplify from 'simplify-js'
-import * as svgpath from 'svgpath'
-import { JSDOM } from 'jsdom'
+// import { JSDOM } from 'jsdom'
 import { Path, registerWindow } from '@svgdotjs/svg.js'
-import { createSVGWindow } from 'svgdom'
-
-import { Shape, ShapeBuffer, Group, Vec2 } from '@urpflanze/core'
 import { parseColor } from '@urpflanze/color'
-
-import { ISVGParsedPath, ISVGParsed, ISVGElementConversion, ISVGDrawer } from './types'
+import { Group, IPropArguments, Shape, ShapeBuffer, Vec2 } from '@urpflanze/core'
+import { Adapt } from '@urpflanze/core/dist/modifiers/Adapt'
+import simplify from 'simplify-js'
+import { createSVGWindow } from 'svgdom'
+import * as svgpath from 'svgpath'
+import { compose, fromDefinition, fromTransformAttribute, toSVG } from 'transformation-matrix'
+import { ISVGDrawer, ISVGElementConversion, ISVGParsed, ISVGParsedPath } from './types'
 import { conversion, fromPercentage } from './utilities'
-import { IPropArguments } from '@urpflanze/core/dist/types'
+
+const isBROWSER = typeof window !== 'undefined' && typeof document !== 'undefined'
 
 /**
  *
@@ -28,7 +28,8 @@ class SVGImporter {
 	 * Match string is SVG
 	 * @static
 	 */
-	static readonly SVG_REGEX = /^\s*(?:<\?xml[^>]*>\s*)?(?:<!doctype svg[^>]*\s*(?:\[?(?:\s*<![^>]*>\s*)*\]?)*[^>]*>\s*)?(?:<svg[^>]*>[^]*<\/svg>|<svg[^/>]*\/\s*>)\s*$/i
+	static readonly SVG_REGEX =
+		/^\s*(?:<\?xml[^>]*>\s*)?(?:<!doctype svg[^>]*\s*(?:\[?(?:\s*<![^>]*>\s*)*\]?)*[^>]*>\s*)?(?:<svg[^>]*>[^]*<\/svg>|<svg[^/>]*\/\s*>)\s*$/i
 
 	/**
 	 * Match commments
@@ -62,8 +63,17 @@ class SVGImporter {
 			return null
 		}
 
-		const doc = new JSDOM(input).window.document
-		return doc.body.firstChild as SVGSVGElement
+		// const doc = new JSDOM(input).window.document
+		const _window = isBROWSER ? window : createSVGWindow()
+		const document = _window.document
+
+		if (!isBROWSER) {
+			registerWindow(_window, document)
+		}
+
+		const div = document.createElement('div')
+		div.innerHTML = input
+		return div.firstChild as SVGSVGElement
 	}
 
 	/**
@@ -309,7 +319,7 @@ class SVGImporter {
 		for (let i = 0, len = paths.length; i < len; i++) {
 			const buffer = SVGImporter.pathToBuffer(paths[i], 1)
 			if (buffer) {
-				const box = ShapeBuffer.getBounding(buffer)
+				const box = Adapt.getBounding(buffer)
 				box.width += box.x
 				box.height += box.y
 				if (box.width > c_width) c_width = box.width
@@ -385,9 +395,12 @@ class SVGImporter {
 		const r = 2 / Math.max(width, height)
 
 		// create path
-		const window = createSVGWindow()
-		const document = window.document
-		registerWindow(window, document)
+		const _window = isBROWSER ? window : createSVGWindow()
+		const document = _window.document
+
+		if (!isBROWSER) {
+			registerWindow(_window, document)
+		}
 
 		const originalPathD = path.getAttribute('d') as string
 		const transform = path.getAttribute('transform') || ''
@@ -463,8 +476,13 @@ class SVGImporter {
 	 * @returns {Array<SVGPathElement>}
 	 */
 	static elementToPath(element: SVGElement): Array<SVGPathElement> {
-		// const window = createSVGWindow()
-		const document = new JSDOM('').window.document
+		const _window = isBROWSER ? window : createSVGWindow()
+		const document = _window.document
+
+		if (!isBROWSER) {
+			registerWindow(_window, document)
+		}
+		// const document = new JSDOM('').window.document
 
 		let paths: Array<string> = []
 
@@ -486,9 +504,6 @@ class SVGImporter {
 		return paths.map(d => {
 			const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
 
-			if (element.nodeName === 'rect') {
-				console.log('rect', element.getAttribute('transform'))
-			}
 			path.setAttribute('d', d)
 			path.setAttribute('transform', element.getAttribute('transform') || '')
 			path.setAttribute('style', element.getAttribute('style') || '')
