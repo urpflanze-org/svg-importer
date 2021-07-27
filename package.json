@@ -1,6 +1,6 @@
 {
 	"name": "@urpflanze/svg-importer",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "Urpflanze package",
 	"license": "GPL-3.0-or-later",
 	"docs": "https://github.com/urpflanze-org/svg-importer/blob/master/README.md",
