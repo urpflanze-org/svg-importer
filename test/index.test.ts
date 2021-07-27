@@ -1,7 +1,7 @@
 import tap from 'tap'
 
 import { ShapeBuffer } from '@urpflanze/core'
-import { SVGImporter } from '../dist'
+import { SVGImporter } from '../dist/cjs'
 
 const shape = SVGImporter.parse(
 	`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><path d="M0 0 L200 0 L200 200 L0 200 Z" /></svg> `,
