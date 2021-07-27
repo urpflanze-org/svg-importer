@@ -1,16 +1,12 @@
-// import { JSDOM } from 'jsdom'
-import { Path, registerWindow } from '@svgdotjs/svg.js'
+import { Path } from '@svgdotjs/svg.js'
 import { parseColor } from '@urpflanze/color'
 import { Group, IPropArguments, Shape, ShapeBuffer, Vec2 } from '@urpflanze/core'
-import { Adapt } from '@urpflanze/core/dist/modifiers/Adapt'
+import { Modifiers } from '@urpflanze/core'
 import simplify from 'simplify-js'
-import { createSVGWindow } from 'svgdom'
 import * as svgpath from 'svgpath'
 import { compose, fromDefinition, fromTransformAttribute, toSVG } from 'transformation-matrix'
 import { ISVGDrawer, ISVGElementConversion, ISVGParsed, ISVGParsedPath } from './types'
 import { conversion, fromPercentage } from './utilities'
-
-const isBROWSER = typeof window !== 'undefined' && typeof document !== 'undefined'
 
 /**
  *
@@ -49,6 +45,16 @@ class SVGImporter {
 		return SVGImporter.SVG_REGEX.test(input.replace(SVGImporter.COMMENT_REGEX, ''))
 	}
 
+	private static windowInstance: Window
+
+	public static getWindowInstance(): Window {
+		return SVGImporter.windowInstance
+	}
+
+	public static setWindowInstance(window: Window): void {
+		SVGImporter.windowInstance = window
+	}
+
 	/**
 	 * Convert string to SVGSVGElement
 	 *
@@ -63,13 +69,8 @@ class SVGImporter {
 			return null
 		}
 
-		// const doc = new JSDOM(input).window.document
-		const _window = isBROWSER ? window : createSVGWindow()
-		const document = _window.document
-
-		if (!isBROWSER) {
-			registerWindow(_window, document)
-		}
+		const window = SVGImporter.windowInstance
+		const document = window.document
 
 		const div = document.createElement('div')
 		div.innerHTML = input
@@ -319,7 +320,7 @@ class SVGImporter {
 		for (let i = 0, len = paths.length; i < len; i++) {
 			const buffer = SVGImporter.pathToBuffer(paths[i], 1)
 			if (buffer) {
-				const box = Adapt.getBounding(buffer)
+				const box = Modifiers.Adapt.getBounding(buffer)
 				box.width += box.x
 				box.height += box.y
 				if (box.width > c_width) c_width = box.width
@@ -395,12 +396,6 @@ class SVGImporter {
 		const r = 2 / Math.max(width, height)
 
 		// create path
-		const _window = isBROWSER ? window : createSVGWindow()
-		const document = _window.document
-
-		if (!isBROWSER) {
-			registerWindow(_window, document)
-		}
 
 		const originalPathD = path.getAttribute('d') as string
 		const transform = path.getAttribute('transform') || ''
@@ -476,13 +471,8 @@ class SVGImporter {
 	 * @returns {Array<SVGPathElement>}
 	 */
 	static elementToPath(element: SVGElement): Array<SVGPathElement> {
-		const _window = isBROWSER ? window : createSVGWindow()
-		const document = _window.document
-
-		if (!isBROWSER) {
-			registerWindow(_window, document)
-		}
-		// const document = new JSDOM('').window.document
+		const window = SVGImporter.windowInstance
+		const document = window.document
 
 		let paths: Array<string> = []
 
