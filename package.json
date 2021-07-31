@@ -33,8 +33,8 @@
 			"url": "https://etherscan.io/address/0x9086c4bb7015c1d6dc79162d02e7e1239c982c01"
 		}
 	],
-	"module": "build/esm/urpflanze-svg-importer.min.js",
-	"browser": "build/umd/urpflanze-svg-importer.min.js",
+	"module": "build/esm/urpflanze-svg-importer.js",
+	"browser": "build/umd/urpflanze-svg-importer.js",
 	"main": "dist/cjs/index.js",
 	"types": "dist/cjs/index.d.ts",
 	"files": [
