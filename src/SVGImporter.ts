@@ -1,10 +1,17 @@
 import { Path } from '@svgdotjs/svg.js'
+
 import { parseColor } from '@urpflanze/color'
-import { Group, IPropArguments, Shape, ShapeBuffer, Vec2 } from '@urpflanze/core'
-import { Modifiers } from '@urpflanze/core'
+import type { IPropArguments } from '@urpflanze/core'
+import { Group } from '@urpflanze/core/dist/cjs/Group'
+import * as Vec2 from '@urpflanze/core/dist/cjs/math/Vec2'
+import { Adapt } from '@urpflanze/core/dist/cjs/modifiers/Adapt'
+import { Shape } from '@urpflanze/core/dist/cjs/shapes/Shape'
+import { ShapeBuffer } from '@urpflanze/core/dist/cjs/shapes/ShapeBuffer'
+
 import simplify from 'simplify-js'
 import * as svgpath from 'svgpath'
 import { compose, fromDefinition, fromTransformAttribute, toSVG } from 'transformation-matrix'
+
 import { ISVGDrawer, ISVGElementConversion, ISVGParsed, ISVGParsedPath } from './types'
 import { conversion, fromPercentage } from './utilities'
 
@@ -82,11 +89,11 @@ class SVGImporter {
 	 *
 	 * @static
 	 * @param {string} input
+	 * @param {number} [sideLength=50]
 	 * @param {number} [simplify=0.01]
-	 * @param {number} [sideLength]
 	 * @returns {(Shape | ShapeBuffer | null)}
 	 */
-	static parse(input: string, simplify = 0.01, sideLength?: number): Shape | ShapeBuffer | null {
+	static parse(input: string, sideLength = 50, simplify = 0.01): Shape | ShapeBuffer | null {
 		if (SVGImporter.isSVG(input) === false) {
 			console.warn('[Urpflanze:SVGImport] | Input is not valid svg', input)
 			return null
@@ -320,7 +327,7 @@ class SVGImporter {
 		for (let i = 0, len = paths.length; i < len; i++) {
 			const buffer = SVGImporter.pathToBuffer(paths[i], 1)
 			if (buffer) {
-				const box = Modifiers.Adapt.getBounding(buffer)
+				const box = Adapt.getBounding(buffer)
 				box.width += box.x
 				box.height += box.y
 				if (box.width > c_width) c_width = box.width
