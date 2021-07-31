@@ -1,5 +1,5 @@
 /*!
- * @license Urpflanze SVG Importer v"0.0.3"
+ * @license Urpflanze SVG Importer v"0.0.4"
  * urpflanze-svg-importer.js
  *
  * Github: https://github.com/urpflanze-org/svg-importer
@@ -38,7 +38,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SVGImporter = void 0;
 const SVGImporter_1 = __webpack_require__(1);
 Object.defineProperty(exports, "SVGImporter", ({ enumerable: true, get: function () { return SVGImporter_1.SVGImporter; } }));
-__exportStar(__webpack_require__(38), exports);
+__exportStar(__webpack_require__(71), exports);
 SVGImporter_1.SVGImporter.setWindowInstance(window);
 exports.default = SVGImporter_1.SVGImporter;
 //# sourceMappingURL=index.js.map
@@ -53,12 +53,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SVGImporter = void 0;
 const svg_js_1 = __webpack_require__(2);
 const color_1 = __webpack_require__(3);
-const core_1 = __webpack_require__(8);
-const core_2 = __webpack_require__(8);
-const simplify_js_1 = __webpack_require__(9);
-const svgpath = __webpack_require__(10);
-const transformation_matrix_1 = __webpack_require__(17);
-const utilities_1 = __webpack_require__(37);
+const Group_1 = __webpack_require__(8);
+const Vec2_1 = __webpack_require__(34);
+const Adapt_1 = __webpack_require__(36);
+const Shape_1 = __webpack_require__(11);
+const ShapeBuffer_1 = __webpack_require__(40);
+const simplify_js_1 = __webpack_require__(42);
+const svgpath = __webpack_require__(43);
+const transformation_matrix_1 = __webpack_require__(50);
+const utilities_1 = __webpack_require__(70);
 /**
  *
  * @category Services.Export/Import
@@ -105,11 +108,11 @@ class SVGImporter {
      *
      * @static
      * @param {string} input
+     * @param {number} [sideLength=50]
      * @param {number} [simplify=0.01]
-     * @param {number} [sideLength]
      * @returns {(Shape | ShapeBuffer | null)}
      */
-    static parse(input, simplify = 0.01, sideLength) {
+    static parse(input, sideLength = 50, simplify = 0.01) {
         if (SVGImporter.isSVG(input) === false) {
             console.warn('[Urpflanze:SVGImport] | Input is not valid svg', input);
             return null;
@@ -131,7 +134,7 @@ class SVGImporter {
     static parsedToShape(parsed, sideLength) {
         const shapes = [];
         parsed.buffers.forEach((buffer, i) => {
-            const sb = new core_1.ShapeBuffer({
+            const sb = new ShapeBuffer_1.ShapeBuffer({
                 shape: buffer.buffer,
                 bClosed: buffer.bClosed,
                 sideLength,
@@ -141,9 +144,9 @@ class SVGImporter {
         });
         if (shapes.length === 1)
             return shapes[0];
-        const group = new core_1.Group();
+        const group = new Group_1.Group();
         shapes.forEach(s => group.add(s));
-        return new core_1.Shape({ shape: group });
+        return new Shape_1.Shape({ shape: group });
     }
     /**
      * Convert SVG string to buffers
@@ -181,7 +184,7 @@ class SVGImporter {
         buffers = buffers.map((buffer, index) => {
             const bClosed = SVGImporter.pathIsClosed(paths[index]);
             if (bClosed) {
-                const distance = core_1.Vec2.distance([buffer[0], buffer[1]], [buffer[buffer.length - 2], buffer[buffer.length - 1]]);
+                const distance = Vec2_1.default.distance([buffer[0], buffer[1]], [buffer[buffer.length - 2], buffer[buffer.length - 1]]);
                 if (distance < 1)
                     return buffer.subarray(0, buffer.length - 2);
             }
@@ -290,7 +293,7 @@ class SVGImporter {
         for (let i = 0, len = paths.length; i < len; i++) {
             const buffer = SVGImporter.pathToBuffer(paths[i], 1);
             if (buffer) {
-                const box = core_2.Modifiers.Adapt.getBounding(buffer);
+                const box = Adapt_1.Adapt.getBounding(buffer);
                 box.width += box.x;
                 box.height += box.y;
                 if (box.width > c_width)
@@ -7988,244 +7991,1500 @@ exports.default = colors;
 
 /***/ }),
 /* 8 */
-/***/ ((module) => {
-
-/*!
- * @license Urpflanze v"0.5.5"
- * urpflanze.js
- *
- * Github: https://github.com/urpflanze-org/core
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-(function webpackUniversalModuleDefinition(root, factory) {
-	if(true)
-		module.exports = factory();
-	else {}
-})(window, function() {
-return /******/ (() => { // webpackBootstrap
-/******/ 	var __webpack_modules__ = ([
-/* 0 */
-/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_744__) {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.mod = exports.log = exports.PI2 = exports.PHI = exports.Vec2 = exports.distributePointsInBuffer = exports.prepareBufferForInterpolation = exports.interpolate = exports.distanceFromRepetition = exports.angle2FromRepetition = exports.angleFromRepetition = exports.random = exports.noise = exports.now = exports.toRadians = exports.toDegrees = exports.relativeClamp = exports.clamp = exports.lerp = void 0;
+exports.Group = void 0;
+const Scene_1 = __webpack_require__(9);
+const SceneChild_1 = __webpack_require__(10);
+const ShapeBase_1 = __webpack_require__(12);
+const Adapt_1 = __webpack_require__(36);
 /**
- * Types & Interface
- */
-__exportStar(__nested_webpack_require_744__(1), exports);
-// Set glMatrixArrayType
-const gl_matrix_1 = __nested_webpack_require_744__(10);
-gl_matrix_1.glMatrix.setMatrixArrayType(Array);
-/**
- * Core
- */
-__exportStar(__nested_webpack_require_744__(21), exports);
-__exportStar(__nested_webpack_require_744__(22), exports);
-__exportStar(__nested_webpack_require_744__(23), exports);
-// Shapes
-__exportStar(__nested_webpack_require_744__(24), exports);
-__exportStar(__nested_webpack_require_744__(33), exports);
-__exportStar(__nested_webpack_require_744__(34), exports);
-__exportStar(__nested_webpack_require_744__(35), exports);
-__exportStar(__nested_webpack_require_744__(32), exports);
-__exportStar(__nested_webpack_require_744__(36), exports);
-__exportStar(__nested_webpack_require_744__(37), exports);
-__exportStar(__nested_webpack_require_744__(38), exports);
-__exportStar(__nested_webpack_require_744__(39), exports);
-__exportStar(__nested_webpack_require_744__(40), exports);
-__exportStar(__nested_webpack_require_744__(41), exports);
-__exportStar(__nested_webpack_require_744__(42), exports);
-__exportStar(__nested_webpack_require_744__(43), exports);
-__exportStar(__nested_webpack_require_744__(44), exports);
-__exportStar(__nested_webpack_require_744__(45), exports);
-__exportStar(__nested_webpack_require_744__(46), exports);
-__exportStar(__nested_webpack_require_744__(47), exports);
-// Modifiers
-__exportStar(__nested_webpack_require_744__(29), exports);
-__exportStar(__nested_webpack_require_744__(48), exports);
-// Utilities
-var Utilities_1 = __nested_webpack_require_744__(30);
-Object.defineProperty(exports, "lerp", ({ enumerable: true, get: function () { return Utilities_1.lerp; } }));
-Object.defineProperty(exports, "clamp", ({ enumerable: true, get: function () { return Utilities_1.clamp; } }));
-Object.defineProperty(exports, "relativeClamp", ({ enumerable: true, get: function () { return Utilities_1.relativeClamp; } }));
-Object.defineProperty(exports, "toDegrees", ({ enumerable: true, get: function () { return Utilities_1.toDegrees; } }));
-Object.defineProperty(exports, "toRadians", ({ enumerable: true, get: function () { return Utilities_1.toRadians; } }));
-Object.defineProperty(exports, "now", ({ enumerable: true, get: function () { return Utilities_1.now; } }));
-Object.defineProperty(exports, "noise", ({ enumerable: true, get: function () { return Utilities_1.noise; } }));
-Object.defineProperty(exports, "random", ({ enumerable: true, get: function () { return Utilities_1.random; } }));
-Object.defineProperty(exports, "angleFromRepetition", ({ enumerable: true, get: function () { return Utilities_1.angleFromRepetition; } }));
-Object.defineProperty(exports, "angle2FromRepetition", ({ enumerable: true, get: function () { return Utilities_1.angle2FromRepetition; } }));
-Object.defineProperty(exports, "distanceFromRepetition", ({ enumerable: true, get: function () { return Utilities_1.distanceFromRepetition; } }));
-Object.defineProperty(exports, "interpolate", ({ enumerable: true, get: function () { return Utilities_1.interpolate; } }));
-Object.defineProperty(exports, "prepareBufferForInterpolation", ({ enumerable: true, get: function () { return Utilities_1.prepareBufferForInterpolation; } }));
-Object.defineProperty(exports, "distributePointsInBuffer", ({ enumerable: true, get: function () { return Utilities_1.distributePointsInBuffer; } }));
-var Vec2_1 = __nested_webpack_require_744__(26);
-Object.defineProperty(exports, "Vec2", ({ enumerable: true, get: function () { return Vec2_1.default; } }));
-var math_1 = __nested_webpack_require_744__(27);
-Object.defineProperty(exports, "PHI", ({ enumerable: true, get: function () { return math_1.PHI; } }));
-Object.defineProperty(exports, "PI2", ({ enumerable: true, get: function () { return math_1.PI2; } }));
-Object.defineProperty(exports, "log", ({ enumerable: true, get: function () { return math_1.log; } }));
-Object.defineProperty(exports, "mod", ({ enumerable: true, get: function () { return math_1.mod; } }));
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-/* 1 */
-/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_5621__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__nested_webpack_require_5621__(2), exports);
-__exportStar(__nested_webpack_require_5621__(3), exports);
-__exportStar(__nested_webpack_require_5621__(4), exports);
-__exportStar(__nested_webpack_require_5621__(5), exports);
-__exportStar(__nested_webpack_require_5621__(6), exports);
-__exportStar(__nested_webpack_require_5621__(7), exports);
-__exportStar(__nested_webpack_require_5621__(8), exports);
-__exportStar(__nested_webpack_require_5621__(9), exports);
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-/* 2 */
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=indexedBuffer.js.map
-
-/***/ }),
-/* 3 */
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=propArguments.js.map
-
-/***/ }),
-/* 4 */
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ERepetitionType = void 0;
-/**
- * Repetition type enumerator.
+ * A SceneChild container, propagates properties to children
  *
- * @category Core.Repetition
- * @internal
+ * @order 3
+ * @category Scene.Containers
+ * @extends {SceneChild}
+ * @example
+ * ```javascript
+ * // Group example
+ *
+ * const rect = new Urpflanze.Rect({
+ * 	distance: 100 // <- if a property is set the group will not overwrite it
+ * })
+ * const group = new Urpflanze.Group({
+ * 	repetitions: 3,
+ * 	distance: 200
+ * })
+ *
+ * group.add(rect)
+ * group.add(new Urpflanze.Triangle())
+ * ```
+ * @class Group
  */
-var ERepetitionType;
-(function (ERepetitionType) {
+class Group extends SceneChild_1.SceneChild {
     /**
-     * Defines the type of repetition of the shape,
-     * in a circular way starting from the center of the scene
-     * @order 1
+     * Creates an instance of Group
+     *
+     * @param {ISceneChildSettings} [settings={}]
+     * @memberof Group
      */
-    ERepetitionType[ERepetitionType["Ring"] = 1] = "Ring";
+    constructor(settings = {}) {
+        settings.type = 'Group';
+        super(settings);
+        this.children = [];
+        ['id', 'name', 'data', 'order', 'type'].forEach((prop) => {
+            if (prop in settings)
+                delete settings[prop];
+        });
+        this.props = settings;
+    }
     /**
-     * Defines the type of repetition of the shape,
-     * on a nxm grid starting from the center of the scene
-     * @order 2
+     * Check group has static children
+     *
+     * @returns {boolean}
+     * @memberof Group
      */
-    ERepetitionType[ERepetitionType["Matrix"] = 2] = "Matrix";
-})(ERepetitionType = exports.ERepetitionType || (exports.ERepetitionType = {}));
-//# sourceMappingURL=repetitions.js.map
-
-/***/ }),
-/* 5 */
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=scene-child.js.map
-
-/***/ }),
-/* 6 */
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=scene.js.map
-
-/***/ }),
-/* 7 */
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.EBoundingType = void 0;
-var EBoundingType;
-(function (EBoundingType) {
+    isStatic() {
+        const children = this.children;
+        for (let i = 0, len = children.length; i < len; i++)
+            if (!children[i].isStatic())
+                return false;
+        return true;
+    }
     /**
-     * Relative to the real bounding of the shape
-     * @order 2
+     * Check group has static children indexed
+     *
+     * @returns {boolean}
+     * @memberof Group
      */
-    EBoundingType[EBoundingType["Relative"] = 1] = "Relative";
+    isStaticIndexed() {
+        const children = this.children;
+        for (let i = 0, len = children.length; i < len; i++)
+            if (!children[i].isStaticIndexed())
+                return false;
+        return true;
+    }
     /**
-     * Fixed to te width and height of the shape
-     * @order 3
+     * Add item to Group
+     *
+     * @param {Array<SceneChild>} items
+     * @memberof Group
      */
-    EBoundingType[EBoundingType["Fixed"] = 2] = "Fixed";
-})(EBoundingType = exports.EBoundingType || (exports.EBoundingType = {}));
-//# sourceMappingURL=shape-base.js.map
-
-/***/ }),
-/* 8 */
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//////
-//# sourceMappingURL=shape-primitives.js.map
+    add(...items) {
+        for (let i = 0, len = items.length; i < len; i++) {
+            const item = items[i];
+            const rawItemProps = item.getProps();
+            Object.keys(this.props).forEach((propKey) => {
+                if (typeof rawItemProps[propKey] === 'undefined')
+                    item.setProp(propKey, this.props[propKey]);
+            });
+            item.order =
+                typeof item.order !== 'undefined'
+                    ? item.order
+                    : this.children.length > 0
+                        ? Math.max.apply(this, this.children.map(e => e.order || 0)) + 1
+                        : 0;
+            this.scene && Scene_1.Scene.propagateToChilden(item, this.scene);
+            this.children.push(item);
+        }
+        this.sortChildren();
+    }
+    /**
+     * Sort children
+     *
+     * @memberof Group
+     */
+    sortChildren() {
+        this.children.sort((a, b) => a.order - b.order);
+        this.children = this.children.map((child, index) => {
+            child.order = index;
+            return child;
+        });
+        this.clearBuffer(true);
+    }
+    /**
+     * Return shape children
+     *
+     * @returns {Array<SceneChild>}
+     * @memberof Group
+     */
+    getChildren() {
+        return this.children;
+    }
+    /**
+     * Find scene child from id or name
+     *
+     * @param {number | string} idOrName
+     * @returns {(SceneChild | null)}
+     * @memberof Group
+     */
+    find(idOrName) {
+        if (this.id === idOrName || this.name === idOrName)
+            return this;
+        const children = this.getChildren();
+        for (let i = 0, len = children.length; i < len; i++) {
+            const result = children[i].find(idOrName);
+            if (result !== null)
+                return result;
+        }
+        return null;
+    }
+    /**
+     * Get item from group
+     *
+     * @param {number} index
+     * @returns {(SceneChild | null)}
+     * @memberof Group
+     */
+    get(index) {
+        return index >= 0 && index < this.children.length ? this.children[index] : null;
+    }
+    /**
+     * Remove item from group
+     *
+     * @param {number} index
+     * @returns {(false | Array<SceneChild>)}
+     * @memberof Group
+     */
+    remove(index) {
+        if (index >= 0 && index < this.children.length) {
+            const removed = this.children.splice(index, 1);
+            this.clearBuffer(true);
+            return removed;
+        }
+        return false;
+    }
+    /**
+     * Remove from id
+     *
+     * @param {number} id
+     * @memberof Scene
+     */
+    removeFromId(id) {
+        for (let i = 0, len = this.children.length; i < len; i++) {
+            if (this.children[i].id == id) {
+                this.children.splice(i, 1);
+                return this.clearBuffer(true);
+            }
+        }
+    }
+    /**
+     * Generate children buffers
+     *
+     * @param {number} generateId
+     * @param {boolean} [bDirectSceneChild=false]
+     * @param {IPropArguments} [parentPropArguments]
+     * @memberof Group
+     */
+    generate(generateId, bDirectSceneChild = false, parentPropArguments) {
+        this.generateId = generateId;
+        this.children.forEach(item => item.generate(generateId, bDirectSceneChild, parentPropArguments));
+    }
+    /**
+     * Sum the children bounding
+     *
+     * @return {IShapeBounding}
+     */
+    getBounding() {
+        const boundings = [];
+        const bounding = Adapt_1.Bounding.empty();
+        if (this.children.length > 0) {
+            this.children.forEach(item => boundings.push(item.getBounding()));
+            for (let i = 0, len = this.children.length; i < len; i++) {
+                bounding.x = bounding.x > boundings[i].x ? boundings[i].x : bounding.x;
+                bounding.y = bounding.y > boundings[i].y ? boundings[i].y : bounding.y;
+                bounding.width = bounding.width < boundings[i].width ? boundings[i].width : bounding.width;
+                bounding.height = bounding.height < boundings[i].height ? boundings[i].height : bounding.height;
+            }
+            bounding.cx = bounding.x + bounding.width / 2;
+            bounding.cy = bounding.y + bounding.height / 2;
+        }
+        return bounding;
+    }
+    /**
+     * Chear children buffer
+     *
+     * @param {boolean} [bClearIndexed=false]
+     * @param {boolean} [bPropagateToParents=false]
+     * @memberof Group
+     */
+    clearBuffer(bClearIndexed = false, bPropagateToParents = true) {
+        this.children.forEach(item => item.clearBuffer(bClearIndexed, false));
+        if (this.scene && bPropagateToParents) {
+            const parents = this.scene.getParentsOfSceneChild(this);
+            parents.length > 0 && parents[parents.length - 1].clearBuffer(bClearIndexed, bPropagateToParents /* true */);
+        }
+        // if (bPropagateToParents && this.scene)
+        // {
+        //     const parents = this.scene.getParentsOfSceneChild(this)
+        //     parents.length > 0 && parents[parents.length - 1].clearBuffer(bClearIndexed, true, false)
+        // }
+        // if (bPropagateToChildren)
+        // {
+        //     this.children.forEach(sceneChild => sceneChild.clearBuffer(bClearIndexed, false, true))
+        // }
+    }
+    /**
+     * Set a single or multiple props
+     *
+     * @abstract
+     * @param {(keyof ISceneChildProps | ISceneChildProps)} key
+     * @param {*} [value]
+     * @memberof SceneChild
+     */
+    setProp(key, value) {
+        if (typeof key === 'object')
+            Object.keys(key).forEach((k) => (this.props[k] = key[k]));
+        else
+            this.props[key] = value;
+        this.children.forEach(item => item.setProp(key, value));
+    }
+    /**
+     * Set a single or multiple props
+     *
+     * @param {(keyof ISceneChildProps | ISceneChildProps)} key
+     * @param {*} [value]
+     * @memberof ShapeBase
+     */
+    setPropUnsafe(key, value) {
+        super.setPropUnsafe(key, value);
+        this.children.forEach(item => item.setPropUnsafe(key, value));
+    }
+    /**
+     * Return length of buffer
+     *
+     * @param {IPropArguments} propArguments
+     * @returns {number}
+     * @memberof Group
+     */
+    getBufferLength(propArguments) {
+        return this.children.map(sceneChild => sceneChild.getBufferLength(propArguments)).reduce((p, c) => p + c, 0);
+    }
+    /**
+     * return a single buffer binded from children
+     *
+     * @returns {Float32Array}
+     * @memberof Group
+     */
+    getBuffer() {
+        const buffers = this.children
+            .map(item => item.getBuffer())
+            .filter(b => b !== undefined);
+        const size = buffers.reduce((currLength, buffer) => currLength + buffer.length, 0);
+        if (size > 0) {
+            const result = new Float32Array(size);
+            result.set(buffers[0], 0);
+            for (let i = 1, offset = 0, len = buffers.length; i < len; i++) {
+                offset += buffers[i - 1].length;
+                result.set(buffers[i], offset);
+            }
+            return result;
+        }
+        return ShapeBase_1.ShapeBase.EMPTY_BUFFER;
+    }
+    /**
+     * return a single buffer binded from children
+     *
+     * @returns {(Array<IBufferIndex> | undefined)}
+     * @memberof Group
+     */
+    getIndexedBuffer() {
+        const indexed = this.children.map(item => item.getIndexedBuffer()).filter(b => b !== undefined);
+        return [].concat.apply([], indexed);
+    }
+    /**
+     * Call strem on children
+     *
+     * @param {(streamArguments: IStreamArguments) => void} callback
+     * @memberof Group
+     */
+    stream(callback) {
+        this.children.forEach(item => item.stream(callback));
+    }
+}
+exports.Group = Group;
+//# sourceMappingURL=Group.js.map
 
 /***/ }),
 /* 9 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Scene = void 0;
+const SceneChild_1 = __webpack_require__(10);
+const Group_1 = __webpack_require__(8);
+const Shape_1 = __webpack_require__(11);
+const Utilities_1 = __webpack_require__(38);
+/**
+ * Container for all SceneChild.
+ * The main purpose is to manage the drawing order and update the child buffers
+ *
+ * @order 1
+ * @category Scene
+ * @class Scene
+ */
+class Scene {
+    /**
+     * Creates an instance of Scene.
+     * You can see the default values in the property definitions
+     */
+    constructor(settings = {}) {
+        /**
+         * Logical number, the drawer will take care of defining the unit of measure
+         */
+        this.width = 400;
+        /**
+         * Logical number, the drawer will take care of defining the unit of measure
+         */
+        this.height = 400;
+        /**
+         * Default background color (black)
+         */
+        this.background = 'hsla(0, 0%, 0%, 1)';
+        /**
+         * Default ScenePrimitive stroke color (white)
+         */
+        this.color = 'hsla(0, 0%, 100%, 1)';
+        /**
+         * Current time
+         */
+        this.currentTime = 0;
+        if (typeof settings.width !== 'undefined')
+            this.width = settings.width;
+        if (typeof settings.height !== 'undefined')
+            this.height = settings.height;
+        if (typeof settings.background !== 'undefined')
+            this.background = settings.background;
+        if (typeof settings.color !== 'undefined')
+            this.color = settings.color;
+        this.children = [];
+        this.center = [this.width / 2, this.height / 2];
+        this.anchor =
+            settings.anchor && Array.isArray(settings.anchor)
+                ? [
+                    typeof settings.anchor[0] === 'number'
+                        ? (0.5 + Utilities_1.clamp(-1, 1, settings.anchor[0]) * 0.5) * this.width
+                        : settings.anchor[0] === 'left'
+                            ? 0
+                            : settings.anchor[0] === 'right'
+                                ? this.width
+                                : this.center[0],
+                    typeof settings.anchor[1] === 'number'
+                        ? (0.5 + Utilities_1.clamp(-1, 1, settings.anchor[1]) * 0.5) * this.height
+                        : settings.anchor[1] === 'top'
+                            ? 0
+                            : settings.anchor[1] === 'bottom'
+                                ? this.height
+                                : this.center[1],
+                ]
+                : [this.center[0], this.center[1]];
+    }
+    /**
+     * Return width percentage
+     *
+     * @param {number} [percentage=100]
+     * @returns {number}
+     */
+    getWidth(percentage = 100) {
+        return (this.width * percentage) / 100;
+    }
+    /**
+     * Return height percentage
+     *
+     * @param {number} [percentage=100]
+     * @returns {number}
+     */
+    getHeight(percentage = 100) {
+        return (this.height * percentage) / 100;
+    }
+    /**
+     * Resize the scene size
+     *
+     * @param {number} width
+     * @param {number} [height=width]
+     * @memberof Scene
+     */
+    resize(width, height = width) {
+        this.width = width;
+        this.height = height;
+        this.center = [this.width / 2, this.height / 2];
+        const anchor = [this.width / this.anchor[0], this.height / this.anchor[1]];
+        this.anchor = [this.width / anchor[0], this.height / anchor[1]];
+        this.children.forEach(sceneChild => sceneChild.clearBuffer(true, false));
+    }
+    /**
+     * Update all children, generate a streamable buffer for drawing
+     *
+     * @param {number} [atTime] time in ms
+     * @memberof Scene
+     */
+    update(atTime = 0) {
+        this.currentTime = atTime;
+        for (let i = 0, len = this.children.length; i < len; i++) {
+            this.children[i].generate(this.currentTime, true);
+        }
+    }
+    /**
+     * Traverse the child buffer and use it with callback
+     *
+     * @param {(streamArguments: IStreamArguments) => void} callback
+     * @memberof Scene
+     */
+    stream(callback) {
+        this.children.forEach(sceneChild => sceneChild.stream(callback));
+    }
+    /*
+     |--------------------------------------------------------------------------
+     |  SceneChild
+     |--------------------------------------------------------------------------
+     */
+    /**
+     * Return a list of children
+     *
+     * @returns {Array<SceneChild>}
+     * @memberof Scene
+     */
+    getChildren() {
+        return this.children;
+    }
+    /**
+     * Add SceneChild to Scene, pass `order` as last parameter for drawing priorities
+     *
+     * @param {Array<SceneChild>} items
+     * @param {number} [order]
+     * @memberof Scene
+     */
+    add(...items /**, order: number */) {
+        const order = typeof items[items.length - 1] === 'number' ? items[items.length - 1] : undefined;
+        const len = items.length - (typeof order === 'undefined' ? 0 : 1);
+        for (let i = 0; i < len; i++) {
+            const item = items[i];
+            item.order =
+                typeof order !== 'undefined'
+                    ? order + i
+                    : typeof item.order !== 'undefined'
+                        ? item.order
+                        : this.children.length > 0
+                            ? Math.max.apply(this, this.children.map(e => e.order || 0)) + 1
+                            : 0;
+            Scene.propagateToChilden(item, this);
+            this.children.push(item);
+            item.clearBuffer(true, false);
+            item.generate(0, true);
+        }
+        this.sortChildren();
+    }
+    /**
+     * Sort children by order
+     *
+     * @memberof Scene
+     */
+    sortChildren() {
+        this.children.sort((a, b) => a.order - b.order);
+        this.children = this.children.map((child, index) => {
+            child.order = index;
+            return child;
+        });
+    }
+    /**
+     * Find sceneChild from id or name in the whole scene
+     *
+     * @param {string | number} idOrName
+     * @returns {(SceneChild | null)}
+     * @memberof Scene
+     */
+    find(idOrName) {
+        const children = this.getChildren();
+        for (let i = 0, len = children.length; i < len; i++) {
+            const result = children[i].find(idOrName);
+            if (result !== null)
+                return result;
+        }
+        return null;
+    }
+    /**
+     * Get shape by index
+     *
+     * @param {number} index
+     * @returns {(SceneChild | null)}
+     * @memberof Scene
+     */
+    get(index) {
+        return index >= 0 && index < this.children.length ? this.children[index] : null;
+    }
+    /**
+     * Remove a shape by index
+     *
+     * @param {number} index
+     * @memberof Scene
+     */
+    remove(index) {
+        index >= 0 && index < this.children.length && this.children.splice(index, 1);
+    }
+    /**
+     * Removes all children
+     *
+     * @memberof Scene
+     */
+    removeChildren() {
+        this.children = [];
+    }
+    /**
+     * Remove sceneChild by id or name
+     *
+     * @param {number | number} idOrName
+     * @memberof Scene
+     */
+    removeFromId(idOrName) {
+        for (let i = 0, len = this.children.length; i < len; i++)
+            if (this.children[i].id === idOrName || this.children[i].name === idOrName) {
+                this.children.splice(i, 1);
+                return;
+            }
+    }
+    /**
+     * Return true if sceneChild is direct children
+     *
+     * @param {SceneChild} sceneChild
+     * @returns {boolean}
+     * @memberof Scene
+     */
+    isFirstLevelChild(sceneChild) {
+        for (let i = 0, len = this.children.length; i < len; i++)
+            if (this.children[i].id === sceneChild.id)
+                return true;
+        const parents = this.getParentsOfSceneChild(sceneChild);
+        return parents.length === 1 && parents[0] instanceof Group_1.Group;
+    }
+    /**
+     * Returns the list of sceneChild hierarchy starting from the scene
+     *
+     * @param {SceneChild} sceneChild
+     * @returns {Array<SceneChild>}
+     * @memberof Scene
+     */
+    getParentsOfSceneChild(sceneChild) {
+        const result = Scene.getParentsOfSceneChild(this, sceneChild);
+        if (result) {
+            result.splice(0, 1);
+            return result;
+        }
+        return [];
+    }
+    /**
+     * Returns the list of sceneChild hierarchy starting from the scene
+     *
+     * @static
+     * @param {(Scene | SceneChild)} current
+     * @param {SceneChild} sceneChild
+     * @param {(Array<SceneChild | Scene>)} [parents=[]]
+     * @returns {(Array<SceneChild | Scene> | null)}
+     * @memberof Scene
+     */
+    static getParentsOfSceneChild(current, sceneChild, parents = []) {
+        let result;
+        if (current instanceof SceneChild_1.SceneChild) {
+            if (current.id == sceneChild.id)
+                return parents;
+            if (current instanceof Shape_1.Shape && current.shape) {
+                const tmpParents = parents.slice();
+                tmpParents.push(current);
+                if ((result = Scene.getParentsOfSceneChild(current.shape, sceneChild, tmpParents)))
+                    return result;
+            }
+        }
+        if (current instanceof Scene || current instanceof Group_1.Group) {
+            const children = current.getChildren();
+            parents.push(current);
+            for (let i = 0, len = children.length; i < len; i++) {
+                const child = children[i];
+                if ((result = Scene.getParentsOfSceneChild(child, sceneChild, parents)))
+                    return result;
+            }
+            parents.pop();
+        }
+        return null;
+    }
+    /**
+     * Walk through the scene
+     *
+     * @static
+     * @param {SceneChild} callbackk
+     * @param {(Scene | SceneChild)} current
+     * @memberof Scene
+     */
+    static walk(callback, current) {
+        if (current instanceof SceneChild_1.SceneChild) {
+            if (callback(current) === false)
+                return false;
+            if (current instanceof Shape_1.Shape && current.shape)
+                if (Scene.walk(callback, current.shape) === false)
+                    return false;
+        }
+        if (current instanceof Scene || current instanceof Group_1.Group) {
+            const children = current.getChildren();
+            for (let i = 0, len = children.length; i < len; i++) {
+                const child = children[i];
+                if (Scene.walk(callback, child) === false)
+                    return false;
+            }
+        }
+    }
+    /**
+     * Propagate scene to sceneChild (and children)
+     *
+     * @static
+     * @param {SceneChild} sceneChild
+     * @param {Scene} scene
+     * @memberof Scene
+     */
+    static propagateToChilden(sceneChild, scene) {
+        sceneChild.scene = scene;
+        if (sceneChild instanceof Group_1.Group) {
+            sceneChild.getChildren().forEach((item) => {
+                Scene.propagateToChilden(item, scene);
+            });
+        }
+        else if (sceneChild instanceof Shape_1.Shape && sceneChild.shape) {
+            sceneChild.shape.scene = scene;
+            Scene.propagateToChilden(sceneChild.shape, scene);
+        }
+    }
+}
+exports.Scene = Scene;
+//# sourceMappingURL=Scene.js.map
+
+/***/ }),
+/* 10 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-// Shape
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=shapes.js.map
+exports.SceneChild = void 0;
+/**
+ * Autoincrement sceneChild default id
+ *
+ * @internal
+ * @ignore
+ */
+let __id = 0;
+/**
+ * The element to be added into a scene.
+ * Preserve props, drawing order, generate and return buffers.
+ * The only implementations of this class are <a href="[base_url]/Group">Group</a> and <a href="[base_url]/ShapeBase">ShapeBase</a>
+ *
+ * @abstract
+ * @category Scene
+ * @order 2
+ * @class SceneChild
+ */
+class SceneChild {
+    /**
+     * Creates an instance of SceneChild.
+     * Base values will be assigned in case they are not passed
+     *
+     * @param {ISceneChildSettings} settings
+     */
+    constructor(settings) {
+        var _a;
+        /**
+         * Shape generation id
+         * used for prevent buffer calculation
+         *
+         * @internal
+         * @ignore
+         */
+        this.generateId = -1;
+        this.id = (_a = settings.id) !== null && _a !== void 0 ? _a : ++__id;
+        this.type = settings.type || 'SceneChild';
+        this.name = settings.name || this.type + '_' + this.id;
+        this.data = settings.data || {};
+        this.props = {};
+    }
+    /**
+     * Find this or form or children.
+     * Overridden by classes that extend it
+     *
+     * @param {string | number} idOrName
+     * @returns {(SceneChild | null)}
+     */
+    find(idOrName) {
+        if (this.id === idOrName || this.name === idOrName)
+            return this;
+        return null;
+    }
+    /**
+     * Return the sceneChild properties
+     *
+     * @returns {Props}
+     */
+    getProps() {
+        return this.props;
+    }
+    /**
+     * Return a sceneChild prop or default value
+     *
+     * @param {keyof Props} key
+     * @param {PropArguments} [propArguments]
+     * @param {*} [defaultValue]
+     * @returns {*}
+     */
+    getProp(key, propArguments, defaultValue) {
+        var _a;
+        return ((_a = this.props[key]) !== null && _a !== void 0 ? _a : defaultValue);
+    }
+    /**
+     * Check SceneChild has prop
+     *
+     * @param {keyof Props} key
+     * @returns
+     */
+    hasProp(key) {
+        return typeof this.props[key] !== 'undefined';
+    }
+    /**
+     * Set a single or multiple props
+     *
+     * @param {(keyof ISceneChildProps<PropArguments> | ISceneChildProps<PropArguments>)} key
+     * @param {*} [value]
+     */
+    setPropUnsafe(key, value) {
+        if (typeof key == 'string')
+            this.props[key] = value;
+        else
+            Object.keys(key).forEach((k) => (this.props[k] = key[k]));
+    }
+}
+exports.SceneChild = SceneChild;
+//# sourceMappingURL=SceneChild.js.map
 
 /***/ }),
-/* 10 */
-/***/ ((__unused_webpack_module, __webpack_exports__, __nested_webpack_require_9329__) => {
+/* 11 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
-__nested_webpack_require_9329__.r(__webpack_exports__);
-/* harmony export */ __nested_webpack_require_9329__.d(__webpack_exports__, {
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Shape = void 0;
+const Scene_1 = __webpack_require__(9);
+const SceneChild_1 = __webpack_require__(10);
+const ShapeBase_1 = __webpack_require__(12);
+/**
+ * Container of ShapeBase or Group, it applies transformations on each repetition
+ *
+ * @category Scene.Containers
+ */
+class Shape extends ShapeBase_1.ShapeBase {
+    /**
+     * Creates an instance of Shape.
+     *
+     * @param {ShapeSettings} [settings={}]
+     */
+    constructor(settings) {
+        settings.type = settings.type || 'Shape';
+        super(settings);
+        if (settings.shape instanceof SceneChild_1.SceneChild) {
+            this.shape = settings.shape;
+        }
+        else {
+            console.warn("[Urpflanze:Shape] requires the 'shape' property to be instance of SceneChild,\nYou passed:", settings.shape);
+        }
+        this.shapeUseParent = !!settings.shapeUseParent;
+        this.bStatic = this.isStatic();
+        this.bStaticIndexed = this.isStaticIndexed();
+    }
+    /**
+     * Check if shape is static
+     *
+     * @returns {boolean}
+     */
+    isStatic() {
+        // return super.isStatic() && !this.shapeUseParent
+        return super.isStatic() && (this.shape ? this.shape.isStatic() : true);
+    }
+    /**
+     * Check if shape has static index
+     *
+     * @returns {boolean}
+     */
+    isStaticIndexed() {
+        return super.isStaticIndexed() && (this.shape ? this.shape.isStaticIndexed() : true);
+    }
+    /**
+     * Find shape by id or name
+     *
+     * @param {number | string} idOrName
+     * @returns {(SceneChild | null)}
+     */
+    find(idOrName) {
+        if (this.id === idOrName || this.name === idOrName)
+            return this;
+        if (this.shape)
+            return this.shape.find(idOrName);
+        return null;
+    }
+    /**
+     * Return length of buffer
+     *
+     * @param {PropArguments} propArguments
+     * @returns {number}
+     */
+    getBufferLength(propArguments) {
+        if (this.bStatic && this.buffer && this.buffer.length > 0)
+            return this.buffer.length;
+        const childBufferLength = this.shape ? this.shape.getBufferLength(propArguments) : 0;
+        return childBufferLength * this.getRepetitionCount();
+    }
+    /**
+     * Return a buffer of children shape or loop generated buffer
+     *
+     * @protected
+     * @param {number} generateId
+     * @param {PropArguments} propArguments
+     * @returns {Float32Array}
+     */
+    generateBuffer(generateId, propArguments) {
+        if (this.shape) {
+            if (this.shapeUseParent || this.shape.generateId !== generateId) {
+                if (this.shapeUseParent) {
+                    this.shape.clearBuffer(true, false);
+                }
+                this.shape.generate(generateId, false, propArguments);
+            }
+            return this.shape.getBuffer();
+        }
+        return Shape.EMPTY_BUFFER;
+    }
+    /**
+     * Return bounding
+     *
+     * @param {boolean} bDirectSceneChild
+     * @returns {IShapeBounding}
+     */
+    getShapeBounding() {
+        if (this.shape) {
+            return this.shape.getBounding();
+        }
+        return this.bounding; // empty bounding defined in ShapeBase
+    }
+    /**
+     * Add to indexed buffer
+     *
+     * @protected
+     * @param {number} frameLength
+     * @param {IRepetition} repetition
+     * @returns {number} nextIndex
+     */
+    addIndex(frameLength, repetition, singleRepetitionBounding) {
+        if (this.shape) {
+            const childIndexedBuffer = this.shape.getIndexedBuffer() || [];
+            const parentBufferIndex = {
+                shape: this,
+                frameLength,
+                singleRepetitionBounding,
+                repetition: {
+                    type: repetition.type,
+                    angle: repetition.angle,
+                    index: repetition.index,
+                    count: repetition.count,
+                    offset: repetition.offset,
+                    row: {
+                        index: repetition.row.index,
+                        count: repetition.row.count,
+                        offset: repetition.row.offset,
+                    },
+                    col: {
+                        index: repetition.col.index,
+                        count: repetition.col.count,
+                        offset: repetition.col.offset,
+                    },
+                },
+            };
+            for (let i = 0, len = childIndexedBuffer.length; i < len; i++) {
+                const currentIndexed = { ...childIndexedBuffer[i] };
+                const parent = currentIndexed.parent
+                    ? Shape.setIndexedParent(currentIndexed.parent, parentBufferIndex)
+                    : parentBufferIndex;
+                this.indexedBuffer.push({ ...currentIndexed, parent });
+            }
+        }
+    }
+    /**
+     * Set parent of indexed
+     *
+     * @static
+     * @param {(IBufferIndex )} current
+     * @param {IBufferIndex} parent
+     * @returns {(IBufferIndex )}
+     */
+    static setIndexedParent(current, parent) {
+        const index = {
+            ...current,
+        };
+        index.parent = current.parent ? Shape.setIndexedParent(current.parent, parent) : parent;
+        return index;
+    }
+    /**
+     * Set shape
+     *
+     * @param {(SceneChild | undefined)} [shape]
+     */
+    setShape(shape) {
+        if (typeof shape === 'undefined') {
+            this.shape = undefined;
+            this.clearBuffer(true, true);
+        }
+        else {
+            this.scene && Scene_1.Scene.propagateToChilden(shape, this.scene);
+            this.shape = shape;
+            this.shape.clearBuffer(true, true);
+        }
+    }
+}
+exports.Shape = Shape;
+//# sourceMappingURL=Shape.js.map
+
+/***/ }),
+/* 12 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ShapeBase = void 0;
+const gl_matrix_1 = __webpack_require__(13);
+const types_1 = __webpack_require__(24);
+const glme = __webpack_require__(33);
+const Vec2_1 = __webpack_require__(34);
+const math_1 = __webpack_require__(35);
+const Adapt_1 = __webpack_require__(36);
+const Utilities_1 = __webpack_require__(38);
+const SceneChild_1 = __webpack_require__(10);
+const tmpMatrix = gl_matrix_1.mat4.create();
+const transformMatrix = gl_matrix_1.mat4.create();
+const perspectiveMatrix = gl_matrix_1.mat4.create();
+const repetitionMatrix = gl_matrix_1.mat4.create();
+/**
+ * Main class for shape generation
+ *
+ * @category Scene
+ * @abstract
+ * @class ShapeBase
+ * @order 4
+ * @extends {SceneChild}
+ */
+class ShapeBase extends SceneChild_1.SceneChild {
+    /**
+     * Creates an instance of ShapeBase
+     *
+     * @param {ISceneChildSettings} [settings={}]
+     */
+    constructor(settings = {}) {
+        super(settings);
+        /**
+         * Flag used to determine if indexedBuffer has been generated
+         *
+         * @internal
+         * @ignore
+         */
+        this.bIndexed = false;
+        /**
+         * Array used for index a vertex buffer
+         * only for first level scene children
+         *
+         * @internal
+         * @ignore
+         */
+        this.indexedBuffer = [];
+        /**
+         * The bounding inside the scene
+         *
+         * @type {IShapeBounding}
+         */
+        this.bounding = {
+            cx: 0,
+            cy: 0,
+            x: -1,
+            y: -1,
+            width: 2,
+            height: 2,
+        };
+        this.props = {
+            distance: settings.distance,
+            repetitions: settings.repetitions,
+            rotateX: settings.rotateX,
+            rotateY: settings.rotateY,
+            rotateZ: settings.rotateZ,
+            skewX: settings.skewX,
+            skewY: settings.skewY,
+            squeezeX: settings.squeezeX,
+            squeezeY: settings.squeezeY,
+            displace: settings.displace,
+            translate: settings.translate,
+            scale: settings.scale,
+            transformOrigin: settings.transformOrigin,
+            perspective: settings.perspective,
+            perspectiveOrigin: settings.perspectiveOrigin,
+        };
+        this.anchor =
+            settings.anchor && Array.isArray(settings.anchor)
+                ? [
+                    typeof settings.anchor[0] === 'number'
+                        ? Utilities_1.clamp(-1, 1, settings.anchor[0]) * -1
+                        : settings.anchor[0] === 'left'
+                            ? 1
+                            : settings.anchor[0] === 'right'
+                                ? -1
+                                : 0,
+                    typeof settings.anchor[1] === 'number'
+                        ? Utilities_1.clamp(-1, 1, settings.anchor[1]) * -1
+                        : settings.anchor[1] === 'top'
+                            ? 1
+                            : settings.anchor[1] === 'bottom'
+                                ? -1
+                                : 0,
+                ]
+                : [0, 0];
+        this.boundingType =
+            typeof settings.boundingType === 'string'
+                ? settings.boundingType === 'relative'
+                    ? types_1.EBoundingType.Relative
+                    : types_1.EBoundingType.Fixed
+                : settings.boundingType || types_1.EBoundingType.Fixed;
+        this.vertexCallback = settings.vertexCallback;
+    }
+    /**
+     * Check if the shape should be generated every time
+     *
+     * @returns {boolean}
+     */
+    isStatic() {
+        const props = this.props;
+        return (typeof props.repetitions !== 'function' &&
+            typeof props.distance !== 'function' &&
+            typeof props.displace !== 'function' &&
+            typeof props.scale !== 'function' &&
+            typeof props.translate !== 'function' &&
+            typeof props.skewX !== 'function' &&
+            typeof props.skewY !== 'function' &&
+            typeof props.squeezeX !== 'function' &&
+            typeof props.squeezeY !== 'function' &&
+            typeof props.rotateX !== 'function' &&
+            typeof props.rotateY !== 'function' &&
+            typeof props.rotateZ !== 'function' &&
+            typeof props.transformOrigin !== 'function' &&
+            typeof props.perspective !== 'function' &&
+            typeof props.perspectiveOrigin !== 'function');
+    }
+    /**
+     * Check if the indexedBuffer array needs to be recreated every time,
+     * this can happen when a shape generates an array of vertices different in length at each repetition
+     *
+     * @returns {boolean}
+     */
+    isStaticIndexed() {
+        return typeof this.props.repetitions !== 'function';
+    }
+    /**
+     * Return a prop value
+     *
+     * @param {keyof ISceneChildProps} key
+     * @param {PropArguments} [propArguments]
+     * @param {*} [defaultValue]
+     * @returns {*}
+     */
+    getProp(key, propArguments, defaultValue) {
+        let attribute = this.props[key];
+        if (typeof attribute === 'function') {
+            attribute = attribute(propArguments);
+        }
+        return typeof attribute === 'undefined' || Number.isNaN(attribute) ? defaultValue : attribute;
+    }
+    /**
+     * Set a single or multiple props
+     *
+     * @param {(keyof ISceneChildProps<PropArguments> | ISceneChildProps<PropArguments>)} key
+     * @param {*} [value]
+     * @param {boolean} [bClearIndexed=false]
+     */
+    setProp(key, value, bClearIndexed = false) {
+        if (typeof key === 'string') {
+            bClearIndexed = bClearIndexed || key == 'repetitions';
+            this.props[key] = value;
+        }
+        else {
+            bClearIndexed = bClearIndexed || 'repetitions' in key;
+            Object.keys(key).forEach((k) => (this.props[k] = key[k]));
+        }
+        this.clearBuffer(bClearIndexed, true);
+    }
+    /**
+     *  Unset buffer
+     *
+     * @param {boolean} [bClearIndexed=false]
+     * @param {boolean} [bPropagateToParents=false]
+     * @param {boolean} [bPropagateToChildren=false]
+     */
+    clearBuffer(bClearIndexed = false, bPropagateToParents = true) {
+        this.buffer = undefined;
+        if (bClearIndexed) {
+            this.bIndexed = false;
+            this.indexedBuffer = [];
+        }
+        this.bStatic = this.isStatic();
+        this.bStaticIndexed = this.isStaticIndexed();
+        if (bPropagateToParents && this.scene && !this.scene.isFirstLevelChild(this)) {
+            const parents = this.scene.getParentsOfSceneChild(this);
+            parents.length > 0 && parents[parents.length - 1].clearBuffer(bClearIndexed, bPropagateToParents /* true */);
+        }
+    }
+    /**
+     * Update the vertex array if the shape is not static and update the indexedBuffer if it is also not static
+     *
+     * @param {number} generateId generation id
+     * @param {boolean} [bDirectSceneChild=false] adjust shape of center of scene
+     * @param {PropArguments} [parentPropArguments]
+     */
+    generate(generateId = 0, bDirectSceneChild = false, parentPropArguments) {
+        var _a, _b;
+        if (this.buffer && this.bStatic) {
+            return;
+        }
+        this.generateId = generateId;
+        if (!this.bStaticIndexed || !this.bIndexed)
+            this.indexedBuffer = [];
+        const propArguments = ShapeBase.getEmptyPropArguments(this, parentPropArguments);
+        const repetition = propArguments.repetition;
+        const repetitions = this.getProp('repetitions', propArguments, 1);
+        const repetitionType = Array.isArray(repetitions) ? types_1.ERepetitionType.Matrix : types_1.ERepetitionType.Ring;
+        const repetitionCount = Array.isArray(repetitions)
+            ? repetitions[0] * ((_a = repetitions[1]) !== null && _a !== void 0 ? _a : repetitions[0])
+            : repetitions;
+        const repetitionRowCount = Array.isArray(repetitions) ? repetitions[0] : repetitionCount;
+        const repetitionColCount = Array.isArray(repetitions) ? (_b = repetitions[1]) !== null && _b !== void 0 ? _b : repetitions[0] : 1;
+        const rowRepetition = repetition.row;
+        rowRepetition.count = repetitionRowCount;
+        const colRepetition = repetition.col;
+        colRepetition.count = repetitionColCount;
+        repetition.count = repetitionCount;
+        repetition.col.count = repetitionColCount;
+        repetition.row.count = repetitionRowCount;
+        repetition.type = repetitionType;
+        let totalBufferLength = 0;
+        const buffers = [];
+        let currentIndex = 0;
+        const centerMatrix = gl_matrix_1.vec2.fromValues((repetitionColCount - 1) / 2, (repetitionRowCount - 1) / 2);
+        const sceneAnchor = this.scene ? [this.scene.anchor[0], this.scene.anchor[1], 0] : [0, 0, 0];
+        const tmpTotalShapeBounding = [undefined, undefined, undefined, undefined];
+        const tmpSingleRepetitionBounding = [undefined, undefined, undefined, undefined];
+        for (let currentRowRepetition = 0; currentRowRepetition < repetitionRowCount; currentRowRepetition++) {
+            for (let currentColRepetition = 0; currentColRepetition < repetitionColCount; currentColRepetition++, currentIndex++) {
+                repetition.index = currentIndex + 1;
+                repetition.offset = repetitionCount > 1 ? currentIndex / (repetitionCount - 1) : 1;
+                repetition.angle = repetitionType === types_1.ERepetitionType.Ring ? (math_1.PI2 / repetitionCount) * currentIndex : 0;
+                colRepetition.index = currentColRepetition + 1;
+                colRepetition.offset = repetitionColCount > 1 ? currentColRepetition / (repetitionColCount - 1) : 1;
+                rowRepetition.index = currentRowRepetition + 1;
+                rowRepetition.offset = repetitionRowCount > 1 ? currentRowRepetition / (repetitionRowCount - 1) : 1;
+                // Generate primitives buffer recursively
+                const buffer = this.generateBuffer(generateId, propArguments);
+                const bufferLength = buffer.length;
+                const bounding = this.getShapeBounding();
+                buffers[currentIndex] = new Float32Array(bufferLength);
+                totalBufferLength += bufferLength;
+                {
+                    const distance = glme.toVec2(this.getProp('distance', propArguments, glme.VEC2_ZERO));
+                    const displace = this.getProp('displace', propArguments, 0);
+                    const scale = glme.toVec3(this.getProp('scale', propArguments, glme.VEC2_ONE), 1);
+                    const translate = glme.toVec3(this.getProp('translate', propArguments, glme.VEC2_ZERO), 0);
+                    const skewX = this.getProp('skewX', propArguments, 0);
+                    const skewY = this.getProp('skewY', propArguments, 0);
+                    const squeezeX = this.getProp('squeezeX', propArguments, 0);
+                    const squeezeY = this.getProp('squeezeY', propArguments, 0);
+                    const rotateX = this.getProp('rotateX', propArguments, 0);
+                    const rotateY = this.getProp('rotateY', propArguments, 0);
+                    const rotateZ = this.getProp('rotateZ', propArguments, 0);
+                    const perspective = Utilities_1.clamp(0, 1, this.getProp('perspective', propArguments, 0));
+                    const perspectiveOrigin = glme.toVec3(this.getProp('perspectiveOrigin', propArguments, glme.VEC2_ZERO), 0);
+                    const transformOrigin = glme.toVec3(this.getProp('transformOrigin', propArguments, glme.VEC2_ZERO), 0);
+                    let offset;
+                    switch (repetitionType) {
+                        case types_1.ERepetitionType.Ring:
+                            offset = gl_matrix_1.vec3.fromValues(distance[0], 0, 0);
+                            gl_matrix_1.vec3.rotateZ(offset, offset, glme.VEC3_ZERO, repetition.angle + displace);
+                            break;
+                        case types_1.ERepetitionType.Matrix:
+                            offset = gl_matrix_1.vec3.fromValues(distance[1] * (currentColRepetition - centerMatrix[0]), distance[0] * (currentRowRepetition - centerMatrix[1]), 0);
+                            break;
+                    }
+                    const perspectiveSize = perspective > 0 ? Math.max(bounding.width, bounding.height) / 2 : 1;
+                    const perspectiveValue = perspective > 0 ? perspectiveSize + (1 - perspective) * (perspectiveSize * 10) : 0;
+                    const bTransformOrigin = (this.boundingType === types_1.EBoundingType.Relative ? bounding.cx !== 0 || bounding.cy !== 0 : true) ||
+                        perspective !== 0 ||
+                        transformOrigin[0] !== 0 ||
+                        transformOrigin[1] !== 0;
+                    const bPerspectiveOrigin = perspectiveOrigin[0] !== 0 || perspectiveOrigin[1] !== 0;
+                    if (bTransformOrigin) {
+                        if (this.boundingType === types_1.EBoundingType.Relative) {
+                            transformOrigin[0] = transformOrigin[0] * (bounding.width / 2) + bounding.cx;
+                            transformOrigin[1] = transformOrigin[1] * (bounding.height / 2) + bounding.cy;
+                        }
+                        else {
+                            transformOrigin[0] *= bounding.width / 2;
+                            transformOrigin[1] *= bounding.height / 2;
+                        }
+                        transformOrigin[2] = perspectiveValue;
+                    }
+                    /**
+                     * Create Matrices
+                     */
+                    {
+                        /**
+                         * Create Transformation matrix
+                         */
+                        gl_matrix_1.mat4.identity(transformMatrix);
+                        bTransformOrigin && gl_matrix_1.mat4.translate(transformMatrix, transformMatrix, transformOrigin);
+                        if (translate[0] !== 0 || translate[1] !== 0)
+                            gl_matrix_1.mat4.translate(transformMatrix, transformMatrix, translate);
+                        if (skewX !== 0 || skewY !== 0) {
+                            glme.fromSkew(tmpMatrix, [skewX, skewY]);
+                            gl_matrix_1.mat4.multiply(transformMatrix, transformMatrix, tmpMatrix);
+                        }
+                        rotateX !== 0 && gl_matrix_1.mat4.rotateX(transformMatrix, transformMatrix, rotateX);
+                        rotateY !== 0 && gl_matrix_1.mat4.rotateY(transformMatrix, transformMatrix, rotateY);
+                        rotateZ !== 0 && gl_matrix_1.mat4.rotateZ(transformMatrix, transformMatrix, rotateZ);
+                        if (scale[0] !== 1 || scale[1] !== 1)
+                            gl_matrix_1.mat4.scale(transformMatrix, transformMatrix, scale);
+                        bTransformOrigin &&
+                            gl_matrix_1.mat4.translate(transformMatrix, transformMatrix, gl_matrix_1.vec3.scale(transformOrigin, transformOrigin, -1));
+                        /**
+                         * Create Perspective matrix
+                         */
+                        if (perspectiveValue > 0) {
+                            if (bPerspectiveOrigin) {
+                                if (this.boundingType === types_1.EBoundingType.Relative) {
+                                    perspectiveOrigin[0] = perspectiveOrigin[0] * (bounding.width / 2) + bounding.cx;
+                                    perspectiveOrigin[1] = perspectiveOrigin[1] * (bounding.height / 2) + bounding.cy;
+                                }
+                                else {
+                                    perspectiveOrigin[0] *= bounding.width / 2;
+                                    perspectiveOrigin[1] *= bounding.height / 2;
+                                }
+                                perspectiveOrigin[2] = 0;
+                            }
+                            gl_matrix_1.mat4.perspective(perspectiveMatrix, -Math.PI / 2, 1, 0, Infinity);
+                        }
+                        /**
+                         * Create Repetition matrix
+                         */
+                        gl_matrix_1.mat4.identity(repetitionMatrix);
+                        gl_matrix_1.mat4.translate(repetitionMatrix, repetitionMatrix, offset);
+                        if (bDirectSceneChild) {
+                            gl_matrix_1.mat4.translate(repetitionMatrix, repetitionMatrix, sceneAnchor);
+                        }
+                        /**
+                         * Apply anchor
+                         */
+                        const shapeAnchor = [this.anchor[0] * (bounding.width / 2), this.anchor[1] * (bounding.height / 2), 0];
+                        gl_matrix_1.mat4.translate(repetitionMatrix, repetitionMatrix, shapeAnchor);
+                        if (repetitionType === types_1.ERepetitionType.Ring)
+                            gl_matrix_1.mat4.rotateZ(repetitionMatrix, repetitionMatrix, repetition.angle + displace);
+                    }
+                    Adapt_1.Bounding.clear(tmpSingleRepetitionBounding);
+                    // Apply matrices on vertex
+                    for (let bufferIndex = 0; bufferIndex < bufferLength; bufferIndex += 2) {
+                        const vertex = [buffer[bufferIndex], buffer[bufferIndex + 1], perspectiveValue];
+                        {
+                            // Apply squeeze, can be insert into transformMatrix?
+                            squeezeX !== 0 && Vec2_1.default.squeezeX(vertex, squeezeX);
+                            squeezeY !== 0 && Vec2_1.default.squeezeY(vertex, squeezeY);
+                            // Apply transforms
+                            gl_matrix_1.vec3.transformMat4(vertex, vertex, transformMatrix);
+                            // Apply perspective
+                            if (perspectiveValue > 0) {
+                                bPerspectiveOrigin && gl_matrix_1.vec3.add(vertex, vertex, perspectiveOrigin);
+                                gl_matrix_1.vec3.transformMat4(vertex, vertex, perspectiveMatrix);
+                                gl_matrix_1.vec3.scale(vertex, vertex, perspectiveValue);
+                                bPerspectiveOrigin && gl_matrix_1.vec3.sub(vertex, vertex, perspectiveOrigin);
+                            }
+                            // apply repetition matrix
+                            gl_matrix_1.vec3.transformMat4(vertex, vertex, repetitionMatrix);
+                            // custom vertex manipulation
+                            if (typeof this.vertexCallback !== 'undefined') {
+                                const index = bufferIndex / 2;
+                                const count = bufferLength / 2;
+                                const vertexRepetition = {
+                                    index: index + 1,
+                                    count,
+                                    offset: count > 1 ? index / (count - 1) : 1,
+                                };
+                                this.vertexCallback(vertex, vertexRepetition, propArguments);
+                            }
+                        }
+                        buffers[currentIndex][bufferIndex] = vertex[0];
+                        buffers[currentIndex][bufferIndex + 1] = vertex[1];
+                        Adapt_1.Bounding.add(tmpSingleRepetitionBounding, vertex[0], vertex[1]);
+                        Adapt_1.Bounding.add(tmpTotalShapeBounding, vertex[0], vertex[1]);
+                    }
+                }
+                // Bounding.sum(tmpTotalShapeBounding, tmpSingleRepetitionBounding)
+                // After buffer creation, add a frame into indexedBuffer if not static or update bounding
+                const singleRepetitionBounding = { cx: 0, cy: 0, x: -1, y: -1, width: 2, height: 2 };
+                Adapt_1.Bounding.bind(singleRepetitionBounding, tmpSingleRepetitionBounding);
+                if (!this.bStaticIndexed || !this.bIndexed) {
+                    this.addIndex(bufferLength, repetition, singleRepetitionBounding);
+                }
+            }
+        }
+        Adapt_1.Bounding.bind(this.bounding, tmpTotalShapeBounding);
+        this.buffer = new Float32Array(totalBufferLength);
+        for (let i = 0, offset = 0, len = buffers.length; i < len; offset += buffers[i].length, i++)
+            this.buffer.set(buffers[i], offset);
+        this.bIndexed = true;
+    }
+    /**
+     * Return current shape (whit repetions) bounding
+     *
+     * @return {*}  {IShapeBounding}
+     */
+    getBounding() {
+        return this.bounding;
+    }
+    /**
+     * Get number of repetitions
+     *
+     * @returns {number}
+     */
+    getRepetitionCount() {
+        var _a;
+        const repetitions = this.getProp('repetitions', undefined, 1);
+        return Array.isArray(repetitions) ? repetitions[0] * ((_a = repetitions[1]) !== null && _a !== void 0 ? _a : repetitions[0]) : repetitions;
+    }
+    /**
+     * Return buffer
+     *
+     * @returns {(Float32Array | undefined)}
+     */
+    getBuffer() {
+        return this.buffer;
+    }
+    /**
+     * Return indexed buffer
+     *
+     * @returns {(Array<IBufferIndex<Props, PropArguments>> | undefined)}
+     */
+    getIndexedBuffer() {
+        return this.indexedBuffer;
+    }
+    /**
+     * Return number of encapsulation
+     *
+     * @param {IBufferIndex} index
+     * @returns {number}
+     */
+    static getIndexParentLevel(index) {
+        if (typeof index.parent === 'undefined')
+            return 0;
+        let currentParent = index.parent;
+        let currentParentLevel = 1;
+        while (typeof currentParent.parent !== 'undefined') {
+            currentParentLevel++;
+            currentParent = currentParent.parent;
+        }
+        return currentParentLevel;
+    }
+    /**
+     * Stream buffer
+     *
+     * @param {(TStreamCallback} callback
+     */
+    stream(callback) {
+        if (this.buffer && this.indexedBuffer) {
+            for (let i = 0, j = 0, len = this.indexedBuffer.length; i < len; i++) {
+                const currentIndexing = this.indexedBuffer[i];
+                callback({
+                    buffer: this.buffer,
+                    frameLength: currentIndexing.frameLength,
+                    frameBufferIndex: j,
+                    currentIndexing: currentIndexing,
+                    currentShapeIndex: i,
+                    totalShapes: len,
+                });
+                j += currentIndexing.frameLength;
+            }
+        }
+    }
+    /**
+     * Return empty propArguments
+     *
+     * @static
+     * @param {ShapeBase} shape
+     * @return {*}  {PropArguments}
+     */
+    static getEmptyPropArguments(shape, parentPropArguments) {
+        const repetition = {
+            type: types_1.ERepetitionType.Ring,
+            angle: 0,
+            index: 1,
+            offset: 1,
+            count: 1,
+            row: { index: 1, offset: 1, count: 1 },
+            col: { index: 1, offset: 1, count: 1 },
+        };
+        return {
+            repetition,
+            shape,
+            parent: parentPropArguments,
+        };
+    }
+}
+exports.ShapeBase = ShapeBase;
+/**
+ * Empty buffer
+ *
+ * @internal
+ * @ignore
+ */
+ShapeBase.EMPTY_BUFFER = new Float32Array(0);
+/**
+ * Empty BaseRepetition
+ *
+ * @internal
+ * @ignore
+ */
+ShapeBase.getEmptySimpleRepetition = () => ({
+    index: 1,
+    offset: 1,
+    count: 1,
+});
+/**
+ * Empty Repetition
+ *
+ * @internal
+ * @ignore
+ */
+ShapeBase.getEmptyRepetition = () => ({
+    type: types_1.ERepetitionType.Ring,
+    angle: 0,
+    ...ShapeBase.getEmptySimpleRepetition(),
+    row: ShapeBase.getEmptySimpleRepetition(),
+    col: ShapeBase.getEmptySimpleRepetition(),
+});
+//# sourceMappingURL=ShapeBase.js.map
+
+/***/ }),
+/* 13 */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "glMatrix": () => (/* reexport module object */ _common_js__WEBPACK_IMPORTED_MODULE_0__),
 /* harmony export */   "mat2": () => (/* reexport module object */ _mat2_js__WEBPACK_IMPORTED_MODULE_1__),
 /* harmony export */   "mat2d": () => (/* reexport module object */ _mat2d_js__WEBPACK_IMPORTED_MODULE_2__),
@@ -8237,16 +9496,16 @@ __nested_webpack_require_9329__.r(__webpack_exports__);
 /* harmony export */   "vec3": () => (/* reexport module object */ _vec3_js__WEBPACK_IMPORTED_MODULE_8__),
 /* harmony export */   "vec4": () => (/* reexport module object */ _vec4_js__WEBPACK_IMPORTED_MODULE_9__)
 /* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __nested_webpack_require_9329__(11);
-/* harmony import */ var _mat2_js__WEBPACK_IMPORTED_MODULE_1__ = __nested_webpack_require_9329__(12);
-/* harmony import */ var _mat2d_js__WEBPACK_IMPORTED_MODULE_2__ = __nested_webpack_require_9329__(13);
-/* harmony import */ var _mat3_js__WEBPACK_IMPORTED_MODULE_3__ = __nested_webpack_require_9329__(14);
-/* harmony import */ var _mat4_js__WEBPACK_IMPORTED_MODULE_4__ = __nested_webpack_require_9329__(15);
-/* harmony import */ var _quat_js__WEBPACK_IMPORTED_MODULE_5__ = __nested_webpack_require_9329__(16);
-/* harmony import */ var _quat2_js__WEBPACK_IMPORTED_MODULE_6__ = __nested_webpack_require_9329__(19);
-/* harmony import */ var _vec2_js__WEBPACK_IMPORTED_MODULE_7__ = __nested_webpack_require_9329__(20);
-/* harmony import */ var _vec3_js__WEBPACK_IMPORTED_MODULE_8__ = __nested_webpack_require_9329__(18);
-/* harmony import */ var _vec4_js__WEBPACK_IMPORTED_MODULE_9__ = __nested_webpack_require_9329__(17);
+/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
+/* harmony import */ var _mat2_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(15);
+/* harmony import */ var _mat2d_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(16);
+/* harmony import */ var _mat3_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(17);
+/* harmony import */ var _mat4_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(18);
+/* harmony import */ var _quat_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(19);
+/* harmony import */ var _quat2_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(22);
+/* harmony import */ var _vec2_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(23);
+/* harmony import */ var _vec3_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(21);
+/* harmony import */ var _vec4_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(20);
 
 
 
@@ -8260,12 +9519,12 @@ __nested_webpack_require_9329__.r(__webpack_exports__);
 
 
 /***/ }),
-/* 11 */
-/***/ ((__unused_webpack_module, __webpack_exports__, __nested_webpack_require_11573__) => {
+/* 14 */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-__nested_webpack_require_11573__.r(__webpack_exports__);
-/* harmony export */ __nested_webpack_require_11573__.d(__webpack_exports__, {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "EPSILON": () => (/* binding */ EPSILON),
 /* harmony export */   "ARRAY_TYPE": () => (/* binding */ ARRAY_TYPE),
 /* harmony export */   "RANDOM": () => (/* binding */ RANDOM),
@@ -8325,12 +9584,12 @@ if (!Math.hypot) Math.hypot = function () {
 };
 
 /***/ }),
-/* 12 */
-/***/ ((__unused_webpack_module, __webpack_exports__, __nested_webpack_require_13582__) => {
+/* 15 */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-__nested_webpack_require_13582__.r(__webpack_exports__);
-/* harmony export */ __nested_webpack_require_13582__.d(__webpack_exports__, {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "create": () => (/* binding */ create),
 /* harmony export */   "clone": () => (/* binding */ clone),
 /* harmony export */   "copy": () => (/* binding */ copy),
@@ -8358,7 +9617,7 @@ __nested_webpack_require_13582__.r(__webpack_exports__);
 /* harmony export */   "mul": () => (/* binding */ mul),
 /* harmony export */   "sub": () => (/* binding */ sub)
 /* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __nested_webpack_require_13582__(11);
+/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
 
 /**
  * 2x2 Matrix
@@ -8793,12 +10052,12 @@ var mul = multiply;
 var sub = subtract;
 
 /***/ }),
-/* 13 */
-/***/ ((__unused_webpack_module, __webpack_exports__, __nested_webpack_require_25835__) => {
+/* 16 */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-__nested_webpack_require_25835__.r(__webpack_exports__);
-/* harmony export */ __nested_webpack_require_25835__.d(__webpack_exports__, {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "create": () => (/* binding */ create),
 /* harmony export */   "clone": () => (/* binding */ clone),
 /* harmony export */   "copy": () => (/* binding */ copy),
@@ -8825,7 +10084,7 @@ __nested_webpack_require_25835__.r(__webpack_exports__);
 /* harmony export */   "mul": () => (/* binding */ mul),
 /* harmony export */   "sub": () => (/* binding */ sub)
 /* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __nested_webpack_require_25835__(11);
+/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
 
 /**
  * 2x3 Matrix
@@ -9314,12 +10573,12 @@ var mul = multiply;
 var sub = subtract;
 
 /***/ }),
-/* 14 */
-/***/ ((__unused_webpack_module, __webpack_exports__, __nested_webpack_require_39295__) => {
+/* 17 */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-__nested_webpack_require_39295__.r(__webpack_exports__);
-/* harmony export */ __nested_webpack_require_39295__.d(__webpack_exports__, {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "create": () => (/* binding */ create),
 /* harmony export */   "fromMat4": () => (/* binding */ fromMat4),
 /* harmony export */   "clone": () => (/* binding */ clone),
@@ -9353,7 +10612,7 @@ __nested_webpack_require_39295__.r(__webpack_exports__);
 /* harmony export */   "mul": () => (/* binding */ mul),
 /* harmony export */   "sub": () => (/* binding */ sub)
 /* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __nested_webpack_require_39295__(11);
+/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
 
 /**
  * 3x3 Matrix
@@ -10134,12 +11393,12 @@ var mul = multiply;
 var sub = subtract;
 
 /***/ }),
-/* 15 */
-/***/ ((__unused_webpack_module, __webpack_exports__, __nested_webpack_require_61056__) => {
+/* 18 */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-__nested_webpack_require_61056__.r(__webpack_exports__);
-/* harmony export */ __nested_webpack_require_61056__.d(__webpack_exports__, {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "create": () => (/* binding */ create),
 /* harmony export */   "clone": () => (/* binding */ clone),
 /* harmony export */   "copy": () => (/* binding */ copy),
@@ -10188,7 +11447,7 @@ __nested_webpack_require_61056__.r(__webpack_exports__);
 /* harmony export */   "mul": () => (/* binding */ mul),
 /* harmony export */   "sub": () => (/* binding */ sub)
 /* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __nested_webpack_require_61056__(11);
+/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
 
 /**
  * 4x4 Matrix<br>Format: column-major, when typed out it looks like row-major<br>The matrices are being post multiplied.
@@ -12005,12 +13264,12 @@ var mul = multiply;
 var sub = subtract;
 
 /***/ }),
-/* 16 */
-/***/ ((__unused_webpack_module, __webpack_exports__, __nested_webpack_require_113648__) => {
+/* 19 */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-__nested_webpack_require_113648__.r(__webpack_exports__);
-/* harmony export */ __nested_webpack_require_113648__.d(__webpack_exports__, {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "create": () => (/* binding */ create),
 /* harmony export */   "identity": () => (/* binding */ identity),
 /* harmony export */   "setAxisAngle": () => (/* binding */ setAxisAngle),
@@ -12051,10 +13310,10 @@ __nested_webpack_require_113648__.r(__webpack_exports__);
 /* harmony export */   "sqlerp": () => (/* binding */ sqlerp),
 /* harmony export */   "setAxes": () => (/* binding */ setAxes)
 /* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __nested_webpack_require_113648__(11);
-/* harmony import */ var _mat3_js__WEBPACK_IMPORTED_MODULE_3__ = __nested_webpack_require_113648__(14);
-/* harmony import */ var _vec3_js__WEBPACK_IMPORTED_MODULE_2__ = __nested_webpack_require_113648__(18);
-/* harmony import */ var _vec4_js__WEBPACK_IMPORTED_MODULE_1__ = __nested_webpack_require_113648__(17);
+/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
+/* harmony import */ var _mat3_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(17);
+/* harmony import */ var _vec3_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(21);
+/* harmony import */ var _vec4_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(20);
 
 
 
@@ -12767,12 +14026,12 @@ var setAxes = function () {
 }();
 
 /***/ }),
-/* 17 */
-/***/ ((__unused_webpack_module, __webpack_exports__, __nested_webpack_require_135810__) => {
+/* 20 */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-__nested_webpack_require_135810__.r(__webpack_exports__);
-/* harmony export */ __nested_webpack_require_135810__.d(__webpack_exports__, {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "create": () => (/* binding */ create),
 /* harmony export */   "clone": () => (/* binding */ clone),
 /* harmony export */   "fromValues": () => (/* binding */ fromValues),
@@ -12815,7 +14074,7 @@ __nested_webpack_require_135810__.r(__webpack_exports__);
 /* harmony export */   "sqrLen": () => (/* binding */ sqrLen),
 /* harmony export */   "forEach": () => (/* binding */ forEach)
 /* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __nested_webpack_require_135810__(11);
+/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
 
 /**
  * 4 Dimensional Vector
@@ -13481,12 +14740,12 @@ var forEach = function () {
 }();
 
 /***/ }),
-/* 18 */
-/***/ ((__unused_webpack_module, __webpack_exports__, __nested_webpack_require_154416__) => {
+/* 21 */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-__nested_webpack_require_154416__.r(__webpack_exports__);
-/* harmony export */ __nested_webpack_require_154416__.d(__webpack_exports__, {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "create": () => (/* binding */ create),
 /* harmony export */   "clone": () => (/* binding */ clone),
 /* harmony export */   "length": () => (/* binding */ length),
@@ -13536,7 +14795,7 @@ __nested_webpack_require_154416__.r(__webpack_exports__);
 /* harmony export */   "sqrLen": () => (/* binding */ sqrLen),
 /* harmony export */   "forEach": () => (/* binding */ forEach)
 /* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __nested_webpack_require_154416__(11);
+/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
 
 /**
  * 3 Dimensional Vector
@@ -14326,12 +15585,12 @@ var forEach = function () {
 }();
 
 /***/ }),
-/* 19 */
-/***/ ((__unused_webpack_module, __webpack_exports__, __nested_webpack_require_177257__) => {
+/* 22 */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-__nested_webpack_require_177257__.r(__webpack_exports__);
-/* harmony export */ __nested_webpack_require_177257__.d(__webpack_exports__, {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "create": () => (/* binding */ create),
 /* harmony export */   "clone": () => (/* binding */ clone),
 /* harmony export */   "fromValues": () => (/* binding */ fromValues),
@@ -14372,9 +15631,9 @@ __nested_webpack_require_177257__.r(__webpack_exports__);
 /* harmony export */   "exactEquals": () => (/* binding */ exactEquals),
 /* harmony export */   "equals": () => (/* binding */ equals)
 /* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __nested_webpack_require_177257__(11);
-/* harmony import */ var _quat_js__WEBPACK_IMPORTED_MODULE_1__ = __nested_webpack_require_177257__(16);
-/* harmony import */ var _mat4_js__WEBPACK_IMPORTED_MODULE_2__ = __nested_webpack_require_177257__(15);
+/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
+/* harmony import */ var _quat_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(19);
+/* harmony import */ var _mat4_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(18);
 
 
 
@@ -15212,12 +16471,12 @@ function equals(a, b) {
 }
 
 /***/ }),
-/* 20 */
-/***/ ((__unused_webpack_module, __webpack_exports__, __nested_webpack_require_203309__) => {
+/* 23 */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-__nested_webpack_require_203309__.r(__webpack_exports__);
-/* harmony export */ __nested_webpack_require_203309__.d(__webpack_exports__, {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "create": () => (/* binding */ create),
 /* harmony export */   "clone": () => (/* binding */ clone),
 /* harmony export */   "fromValues": () => (/* binding */ fromValues),
@@ -15264,7 +16523,7 @@ __nested_webpack_require_203309__.r(__webpack_exports__);
 /* harmony export */   "sqrLen": () => (/* binding */ sqrLen),
 /* harmony export */   "forEach": () => (/* binding */ forEach)
 /* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __nested_webpack_require_203309__(11);
+/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
 
 /**
  * 2 Dimensional Vector
@@ -15891,1317 +17150,157 @@ var forEach = function () {
 }();
 
 /***/ }),
-/* 21 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_220901__) => {
+/* 24 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Scene = void 0;
-const SceneChild_1 = __nested_webpack_require_220901__(22);
-const Group_1 = __nested_webpack_require_220901__(23);
-const Shape_1 = __nested_webpack_require_220901__(32);
-const Utilities_1 = __nested_webpack_require_220901__(30);
-/**
- * Container for all SceneChild.
- * The main purpose is to manage the drawing order and update the child buffers
- *
- * @order 1
- * @category Core.Scene
- * @class Scene
- */
-class Scene {
-    /**
-     * Creates an instance of Scene.
-     * You can see the default values in the property definitions
-     */
-    constructor(settings = {}) {
-        /**
-         * Logical number, the drawer will take care of defining the unit of measure
-         */
-        this.width = 400;
-        /**
-         * Logical number, the drawer will take care of defining the unit of measure
-         */
-        this.height = 400;
-        /**
-         * Default background color (black)
-         */
-        this.background = 'hsla(0, 0%, 0%, 1)';
-        /**
-         * Default ScenePrimitive stroke color (white)
-         */
-        this.color = 'hsla(0, 0%, 100%, 1)';
-        /**
-         * Current time
-         */
-        this.currentTime = 0;
-        if (typeof settings.width !== 'undefined')
-            this.width = settings.width;
-        if (typeof settings.height !== 'undefined')
-            this.height = settings.height;
-        if (typeof settings.background !== 'undefined')
-            this.background = settings.background;
-        if (typeof settings.color !== 'undefined')
-            this.color = settings.color;
-        this.children = [];
-        this.center = [this.width / 2, this.height / 2];
-        this.anchor =
-            settings.anchor && Array.isArray(settings.anchor)
-                ? [
-                    typeof settings.anchor[0] === 'number'
-                        ? (0.5 + Utilities_1.clamp(-1, 1, settings.anchor[0]) * 0.5) * this.width
-                        : settings.anchor[0] === 'left'
-                            ? 0
-                            : settings.anchor[0] === 'right'
-                                ? this.width
-                                : this.center[0],
-                    typeof settings.anchor[1] === 'number'
-                        ? (0.5 + Utilities_1.clamp(-1, 1, settings.anchor[1]) * 0.5) * this.height
-                        : settings.anchor[1] === 'top'
-                            ? 0
-                            : settings.anchor[1] === 'bottom'
-                                ? this.height
-                                : this.center[1],
-                ]
-                : [this.center[0], this.center[1]];
-    }
-    /**
-     * Return width percentage
-     *
-     * @param {number} [percentage=100]
-     * @returns {number}
-     */
-    getWidth(percentage = 100) {
-        return (this.width * percentage) / 100;
-    }
-    /**
-     * Return height percentage
-     *
-     * @param {number} [percentage=100]
-     * @returns {number}
-     */
-    getHeight(percentage = 100) {
-        return (this.height * percentage) / 100;
-    }
-    /**
-     * Resize the scene size
-     *
-     * @param {number} width
-     * @param {number} [height=width]
-     * @memberof Scene
-     */
-    resize(width, height = width) {
-        this.width = width;
-        this.height = height;
-        this.center = [this.width / 2, this.height / 2];
-        const anchor = [this.width / this.anchor[0], this.height / this.anchor[1]];
-        this.anchor = [this.width / anchor[0], this.height / anchor[1]];
-        this.children.forEach(sceneChild => sceneChild.clearBuffer(true, false));
-    }
-    /**
-     * Update all children, generate a streamable buffer for drawing
-     *
-     * @param {number} [atTime] time in ms
-     * @memberof Scene
-     */
-    update(atTime = 0) {
-        this.currentTime = atTime;
-        for (let i = 0, len = this.children.length; i < len; i++) {
-            this.children[i].generate(this.currentTime, true);
-        }
-    }
-    /**
-     * Traverse the child buffer and use it with callback
-     *
-     * @param {(streamArguments: IStreamArguments) => void} callback
-     * @memberof Scene
-     */
-    stream(callback) {
-        this.children.forEach(sceneChild => sceneChild.stream(callback));
-    }
-    /*
-     |--------------------------------------------------------------------------
-     |  SceneChild
-     |--------------------------------------------------------------------------
-     */
-    /**
-     * Return a list of children
-     *
-     * @returns {Array<SceneChild>}
-     * @memberof Scene
-     */
-    getChildren() {
-        return this.children;
-    }
-    /**
-     * Add SceneChild to Scene, pass `order` as last parameter for drawing priorities
-     *
-     * @param {Array<SceneChild>} items
-     * @param {number} [order]
-     * @memberof Scene
-     */
-    add(...items /**, order: number */) {
-        const order = typeof items[items.length - 1] === 'number' ? items[items.length - 1] : undefined;
-        const len = items.length - (typeof order === 'undefined' ? 0 : 1);
-        for (let i = 0; i < len; i++) {
-            const item = items[i];
-            item.order =
-                typeof order !== 'undefined'
-                    ? order + i
-                    : typeof item.order !== 'undefined'
-                        ? item.order
-                        : this.children.length > 0
-                            ? Math.max.apply(this, this.children.map(e => e.order || 0)) + 1
-                            : 0;
-            Scene.propagateToChilden(item, this);
-            this.children.push(item);
-            item.clearBuffer(true, false);
-            item.generate(0, true);
-        }
-        this.sortChildren();
-    }
-    /**
-     * Sort children by order
-     *
-     * @memberof Scene
-     */
-    sortChildren() {
-        this.children.sort((a, b) => a.order - b.order);
-        this.children = this.children.map((child, index) => {
-            child.order = index;
-            return child;
-        });
-    }
-    /**
-     * Find sceneChild from id or name in the whole scene
-     *
-     * @param {string | number} idOrName
-     * @returns {(SceneChild | null)}
-     * @memberof Scene
-     */
-    find(idOrName) {
-        const children = this.getChildren();
-        for (let i = 0, len = children.length; i < len; i++) {
-            const result = children[i].find(idOrName);
-            if (result !== null)
-                return result;
-        }
-        return null;
-    }
-    /**
-     * Get shape by index
-     *
-     * @param {number} index
-     * @returns {(SceneChild | null)}
-     * @memberof Scene
-     */
-    get(index) {
-        return index >= 0 && index < this.children.length ? this.children[index] : null;
-    }
-    /**
-     * Remove a shape by index
-     *
-     * @param {number} index
-     * @memberof Scene
-     */
-    remove(index) {
-        index >= 0 && index < this.children.length && this.children.splice(index, 1);
-    }
-    /**
-     * Removes all children
-     *
-     * @memberof Scene
-     */
-    removeChildren() {
-        this.children = [];
-    }
-    /**
-     * Remove sceneChild by id or name
-     *
-     * @param {number | number} idOrName
-     * @memberof Scene
-     */
-    removeFromId(idOrName) {
-        for (let i = 0, len = this.children.length; i < len; i++)
-            if (this.children[i].id === idOrName || this.children[i].name === idOrName) {
-                this.children.splice(i, 1);
-                return;
-            }
-    }
-    /**
-     * Return true if sceneChild is direct children
-     *
-     * @param {SceneChild} sceneChild
-     * @returns {boolean}
-     * @memberof Scene
-     */
-    isFirstLevelChild(sceneChild) {
-        for (let i = 0, len = this.children.length; i < len; i++)
-            if (this.children[i].id === sceneChild.id)
-                return true;
-        const parents = this.getParentsOfSceneChild(sceneChild);
-        return parents.length === 1 && parents[0] instanceof Group_1.Group;
-    }
-    /**
-     * Returns the list of sceneChild hierarchy starting from the scene
-     *
-     * @param {SceneChild} sceneChild
-     * @returns {Array<SceneChild>}
-     * @memberof Scene
-     */
-    getParentsOfSceneChild(sceneChild) {
-        const result = Scene.getParentsOfSceneChild(this, sceneChild);
-        if (result) {
-            result.splice(0, 1);
-            return result;
-        }
-        return [];
-    }
-    /**
-     * Returns the list of sceneChild hierarchy starting from the scene
-     *
-     * @static
-     * @param {(Scene | SceneChild)} current
-     * @param {SceneChild} sceneChild
-     * @param {(Array<SceneChild | Scene>)} [parents=[]]
-     * @returns {(Array<SceneChild | Scene> | null)}
-     * @memberof Scene
-     */
-    static getParentsOfSceneChild(current, sceneChild, parents = []) {
-        let result;
-        if (current instanceof SceneChild_1.SceneChild) {
-            if (current.id == sceneChild.id)
-                return parents;
-            if (current instanceof Shape_1.Shape && current.shape) {
-                const tmpParents = parents.slice();
-                tmpParents.push(current);
-                if ((result = Scene.getParentsOfSceneChild(current.shape, sceneChild, tmpParents)))
-                    return result;
-            }
-        }
-        if (current instanceof Scene || current instanceof Group_1.Group) {
-            const children = current.getChildren();
-            parents.push(current);
-            for (let i = 0, len = children.length; i < len; i++) {
-                const child = children[i];
-                if ((result = Scene.getParentsOfSceneChild(child, sceneChild, parents)))
-                    return result;
-            }
-            parents.pop();
-        }
-        return null;
-    }
-    /**
-     * Walk through the scene
-     *
-     * @static
-     * @param {SceneChild} callbackk
-     * @param {(Scene | SceneChild)} current
-     * @memberof Scene
-     */
-    static walk(callback, current) {
-        if (current instanceof SceneChild_1.SceneChild) {
-            if (callback(current) === false)
-                return false;
-            if (current instanceof Shape_1.Shape && current.shape)
-                if (Scene.walk(callback, current.shape) === false)
-                    return false;
-        }
-        if (current instanceof Scene || current instanceof Group_1.Group) {
-            const children = current.getChildren();
-            for (let i = 0, len = children.length; i < len; i++) {
-                const child = children[i];
-                if (Scene.walk(callback, child) === false)
-                    return false;
-            }
-        }
-    }
-    /**
-     * Propagate scene to sceneChild (and children)
-     *
-     * @static
-     * @param {SceneChild} sceneChild
-     * @param {Scene} scene
-     * @memberof Scene
-     */
-    static propagateToChilden(sceneChild, scene) {
-        sceneChild.scene = scene;
-        if (sceneChild instanceof Group_1.Group) {
-            sceneChild.getChildren().forEach((item) => {
-                Scene.propagateToChilden(item, scene);
-            });
-        }
-        else if (sceneChild instanceof Shape_1.Shape && sceneChild.shape) {
-            sceneChild.shape.scene = scene;
-            Scene.propagateToChilden(sceneChild.shape, scene);
-        }
-    }
-}
-exports.Scene = Scene;
-//# sourceMappingURL=Scene.js.map
+__exportStar(__webpack_require__(25), exports);
+__exportStar(__webpack_require__(26), exports);
+__exportStar(__webpack_require__(27), exports);
+__exportStar(__webpack_require__(28), exports);
+__exportStar(__webpack_require__(29), exports);
+__exportStar(__webpack_require__(30), exports);
+__exportStar(__webpack_require__(31), exports);
+__exportStar(__webpack_require__(32), exports);
+//# sourceMappingURL=index.js.map
 
 /***/ }),
-/* 22 */
+/* 25 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SceneChild = void 0;
-/**
- * Autoincrement sceneChild default id
- *
- * @internal
- * @ignore
- */
-let __id = 0;
-/**
- * The element to be added into a scene.
- * Preserve props, drawing order, generate and return buffers.
- * The only implementations of this class are <a href="[base_url]/Group">Group</a> and <a href="[base_url]/ShapeBase">ShapeBase</a>
- *
- * @abstract
- * @category Core.Abstract
- * @order 2
- * @class SceneChild
- */
-class SceneChild {
-    /**
-     * Creates an instance of SceneChild.
-     * Base values will be assigned in case they are not passed
-     *
-     * @param {ISceneChildSettings} settings
-     */
-    constructor(settings) {
-        var _a;
-        /**
-         * Shape generation id
-         * used for prevent buffer calculation
-         *
-         * @internal
-         * @ignore
-         */
-        this.generateId = -1;
-        this.id = (_a = settings.id) !== null && _a !== void 0 ? _a : ++__id;
-        this.type = settings.type || 'SceneChild';
-        this.name = settings.name || this.type + '_' + this.id;
-        this.data = settings.data || {};
-        this.props = {};
-    }
-    /**
-     * Find this or form or children.
-     * Overridden by classes that extend it
-     *
-     * @param {string | number} idOrName
-     * @returns {(SceneChild | null)}
-     */
-    find(idOrName) {
-        if (this.id === idOrName || this.name === idOrName)
-            return this;
-        return null;
-    }
-    /**
-     * Return the sceneChild properties
-     *
-     * @returns {Props}
-     */
-    getProps() {
-        return this.props;
-    }
-    /**
-     * Return a sceneChild prop or default value
-     *
-     * @param {keyof Props} key
-     * @param {PropArguments} [propArguments]
-     * @param {*} [defaultValue]
-     * @returns {*}
-     */
-    getProp(key, propArguments, defaultValue) {
-        var _a;
-        return ((_a = this.props[key]) !== null && _a !== void 0 ? _a : defaultValue);
-    }
-    /**
-     * Check SceneChild has prop
-     *
-     * @param {keyof Props} key
-     * @returns
-     */
-    hasProp(key) {
-        return typeof this.props[key] !== 'undefined';
-    }
-    /**
-     * Set a single or multiple props
-     *
-     * @param {(keyof ISceneChildProps<PropArguments> | ISceneChildProps<PropArguments>)} key
-     * @param {*} [value]
-     */
-    setPropUnsafe(key, value) {
-        if (typeof key == 'string')
-            this.props[key] = value;
-        else
-            Object.keys(key).forEach((k) => (this.props[k] = key[k]));
-    }
-}
-exports.SceneChild = SceneChild;
-//# sourceMappingURL=SceneChild.js.map
+//# sourceMappingURL=indexedBuffer.js.map
 
 /***/ }),
-/* 23 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_235034__) => {
+/* 26 */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Group = void 0;
-const Scene_1 = __nested_webpack_require_235034__(21);
-const SceneChild_1 = __nested_webpack_require_235034__(22);
-const ShapeBase_1 = __nested_webpack_require_235034__(24);
-const Adapt_1 = __nested_webpack_require_235034__(28);
-/**
- * A SceneChild container, propagates properties to children
- *
- * @order 3
- * @category Core.Scene
- * @extends {SceneChild}
- * @example
- * ```javascript
- * // Group example
- *
- * const rect = new Urpflanze.Rect({
- * 	distance: 100 // <- if a property is set the group will not overwrite it
- * })
- * const group = new Urpflanze.Group({
- * 	repetitions: 3,
- * 	distance: 200
- * })
- *
- * group.add(rect)
- * group.add(new Urpflanze.Triangle())
- * ```
- * @class Group
- */
-class Group extends SceneChild_1.SceneChild {
-    /**
-     * Creates an instance of Group
-     *
-     * @param {ISceneChildSettings} [settings={}]
-     * @memberof Group
-     */
-    constructor(settings = {}) {
-        settings.type = 'Group';
-        super(settings);
-        this.children = [];
-        ['id', 'name', 'data', 'order', 'type'].forEach((prop) => {
-            if (prop in settings)
-                delete settings[prop];
-        });
-        this.props = settings;
-    }
-    /**
-     * Check group has static children
-     *
-     * @returns {boolean}
-     * @memberof Group
-     */
-    isStatic() {
-        const children = this.children;
-        for (let i = 0, len = children.length; i < len; i++)
-            if (!children[i].isStatic())
-                return false;
-        return true;
-    }
-    /**
-     * Check group has static children indexed
-     *
-     * @returns {boolean}
-     * @memberof Group
-     */
-    isStaticIndexed() {
-        const children = this.children;
-        for (let i = 0, len = children.length; i < len; i++)
-            if (!children[i].isStaticIndexed())
-                return false;
-        return true;
-    }
-    /**
-     * Add item to Group
-     *
-     * @param {Array<SceneChild>} items
-     * @memberof Group
-     */
-    add(...items) {
-        for (let i = 0, len = items.length; i < len; i++) {
-            const item = items[i];
-            const rawItemProps = item.getProps();
-            Object.keys(this.props).forEach((propKey) => {
-                if (typeof rawItemProps[propKey] === 'undefined')
-                    item.setProp(propKey, this.props[propKey]);
-            });
-            item.order =
-                typeof item.order !== 'undefined'
-                    ? item.order
-                    : this.children.length > 0
-                        ? Math.max.apply(this, this.children.map(e => e.order || 0)) + 1
-                        : 0;
-            this.scene && Scene_1.Scene.propagateToChilden(item, this.scene);
-            this.children.push(item);
-        }
-        this.sortChildren();
-    }
-    /**
-     * Sort children
-     *
-     * @memberof Group
-     */
-    sortChildren() {
-        this.children.sort((a, b) => a.order - b.order);
-        this.children = this.children.map((child, index) => {
-            child.order = index;
-            return child;
-        });
-        this.clearBuffer(true);
-    }
-    /**
-     * Return shape children
-     *
-     * @returns {Array<SceneChild>}
-     * @memberof Group
-     */
-    getChildren() {
-        return this.children;
-    }
-    /**
-     * Find scene child from id or name
-     *
-     * @param {number | string} idOrName
-     * @returns {(SceneChild | null)}
-     * @memberof Group
-     */
-    find(idOrName) {
-        if (this.id === idOrName || this.name === idOrName)
-            return this;
-        const children = this.getChildren();
-        for (let i = 0, len = children.length; i < len; i++) {
-            const result = children[i].find(idOrName);
-            if (result !== null)
-                return result;
-        }
-        return null;
-    }
-    /**
-     * Get item from group
-     *
-     * @param {number} index
-     * @returns {(SceneChild | null)}
-     * @memberof Group
-     */
-    get(index) {
-        return index >= 0 && index < this.children.length ? this.children[index] : null;
-    }
-    /**
-     * Remove item from group
-     *
-     * @param {number} index
-     * @returns {(false | Array<SceneChild>)}
-     * @memberof Group
-     */
-    remove(index) {
-        if (index >= 0 && index < this.children.length) {
-            const removed = this.children.splice(index, 1);
-            this.clearBuffer(true);
-            return removed;
-        }
-        return false;
-    }
-    /**
-     * Remove from id
-     *
-     * @param {number} id
-     * @memberof Scene
-     */
-    removeFromId(id) {
-        for (let i = 0, len = this.children.length; i < len; i++) {
-            if (this.children[i].id == id) {
-                this.children.splice(i, 1);
-                return this.clearBuffer(true);
-            }
-        }
-    }
-    /**
-     * Generate children buffers
-     *
-     * @param {number} generateId
-     * @param {boolean} [bDirectSceneChild=false]
-     * @param {IPropArguments} [parentPropArguments]
-     * @memberof Group
-     */
-    generate(generateId, bDirectSceneChild = false, parentPropArguments) {
-        this.generateId = generateId;
-        this.children.forEach(item => item.generate(generateId, bDirectSceneChild, parentPropArguments));
-    }
-    /**
-     * Sum the children bounding
-     *
-     * @return {IShapeBounding}
-     */
-    getBounding() {
-        const boundings = [];
-        const bounding = Adapt_1.Bounding.empty();
-        if (this.children.length > 0) {
-            this.children.forEach(item => boundings.push(item.getBounding()));
-            for (let i = 0, len = this.children.length; i < len; i++) {
-                bounding.x = bounding.x > boundings[i].x ? boundings[i].x : bounding.x;
-                bounding.y = bounding.y > boundings[i].y ? boundings[i].y : bounding.y;
-                bounding.width = bounding.width < boundings[i].width ? boundings[i].width : bounding.width;
-                bounding.height = bounding.height < boundings[i].height ? boundings[i].height : bounding.height;
-            }
-            bounding.cx = bounding.x + bounding.width / 2;
-            bounding.cy = bounding.y + bounding.height / 2;
-        }
-        return bounding;
-    }
-    /**
-     * Chear children buffer
-     *
-     * @param {boolean} [bClearIndexed=false]
-     * @param {boolean} [bPropagateToParents=false]
-     * @memberof Group
-     */
-    clearBuffer(bClearIndexed = false, bPropagateToParents = true) {
-        this.children.forEach(item => item.clearBuffer(bClearIndexed, false));
-        if (this.scene && bPropagateToParents) {
-            const parents = this.scene.getParentsOfSceneChild(this);
-            parents.length > 0 && parents[parents.length - 1].clearBuffer(bClearIndexed, bPropagateToParents /* true */);
-        }
-        // if (bPropagateToParents && this.scene)
-        // {
-        //     const parents = this.scene.getParentsOfSceneChild(this)
-        //     parents.length > 0 && parents[parents.length - 1].clearBuffer(bClearIndexed, true, false)
-        // }
-        // if (bPropagateToChildren)
-        // {
-        //     this.children.forEach(sceneChild => sceneChild.clearBuffer(bClearIndexed, false, true))
-        // }
-    }
-    /**
-     * Set a single or multiple props
-     *
-     * @abstract
-     * @param {(keyof ISceneChildProps | ISceneChildProps)} key
-     * @param {*} [value]
-     * @memberof SceneChild
-     */
-    setProp(key, value) {
-        if (typeof key === 'object')
-            Object.keys(key).forEach((k) => (this.props[k] = key[k]));
-        else
-            this.props[key] = value;
-        this.children.forEach(item => item.setProp(key, value));
-    }
-    /**
-     * Set a single or multiple props
-     *
-     * @param {(keyof ISceneChildProps | ISceneChildProps)} key
-     * @param {*} [value]
-     * @memberof ShapeBase
-     */
-    setPropUnsafe(key, value) {
-        super.setPropUnsafe(key, value);
-        this.children.forEach(item => item.setPropUnsafe(key, value));
-    }
-    /**
-     * Return length of buffer
-     *
-     * @param {IPropArguments} propArguments
-     * @returns {number}
-     * @memberof Group
-     */
-    getBufferLength(propArguments) {
-        return this.children.map(sceneChild => sceneChild.getBufferLength(propArguments)).reduce((p, c) => p + c, 0);
-    }
-    /**
-     * return a single buffer binded from children
-     *
-     * @returns {Float32Array}
-     * @memberof Group
-     */
-    getBuffer() {
-        const buffers = this.children
-            .map(item => item.getBuffer())
-            .filter(b => b !== undefined);
-        const size = buffers.reduce((currLength, buffer) => currLength + buffer.length, 0);
-        if (size > 0) {
-            const result = new Float32Array(size);
-            result.set(buffers[0], 0);
-            for (let i = 1, offset = 0, len = buffers.length; i < len; i++) {
-                offset += buffers[i - 1].length;
-                result.set(buffers[i], offset);
-            }
-            return result;
-        }
-        return ShapeBase_1.ShapeBase.EMPTY_BUFFER;
-    }
-    /**
-     * return a single buffer binded from children
-     *
-     * @returns {(Array<IBufferIndex> | undefined)}
-     * @memberof Group
-     */
-    getIndexedBuffer() {
-        const indexed = this.children.map(item => item.getIndexedBuffer()).filter(b => b !== undefined);
-        return [].concat.apply([], indexed);
-    }
-    /**
-     * Call strem on children
-     *
-     * @param {(streamArguments: IStreamArguments) => void} callback
-     * @memberof Group
-     */
-    stream(callback) {
-        this.children.forEach(item => item.stream(callback));
-    }
-}
-exports.Group = Group;
-//# sourceMappingURL=Group.js.map
+//# sourceMappingURL=propArguments.js.map
 
 /***/ }),
-/* 24 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_244820__) => {
+/* 27 */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ShapeBase = void 0;
-const gl_matrix_1 = __nested_webpack_require_244820__(10);
-const types_1 = __nested_webpack_require_244820__(1);
-const glme = __nested_webpack_require_244820__(25);
-const Vec2_1 = __nested_webpack_require_244820__(26);
-const math_1 = __nested_webpack_require_244820__(27);
-const Adapt_1 = __nested_webpack_require_244820__(28);
-const Utilities_1 = __nested_webpack_require_244820__(30);
-const SceneChild_1 = __nested_webpack_require_244820__(22);
-const tmpMatrix = gl_matrix_1.mat4.create();
-const transformMatrix = gl_matrix_1.mat4.create();
-const perspectiveMatrix = gl_matrix_1.mat4.create();
-const repetitionMatrix = gl_matrix_1.mat4.create();
+exports.ERepetitionType = void 0;
 /**
- * Main class for shape generation
+ * Repetition type enumerator.
  *
- * @category Core.Abstract
- * @abstract
- * @class ShapeBase
- * @order 4
- * @extends {SceneChild}
- */
-class ShapeBase extends SceneChild_1.SceneChild {
-    /**
-     * Creates an instance of ShapeBase
-     *
-     * @param {ISceneChildSettings} [settings={}]
-     */
-    constructor(settings = {}) {
-        super(settings);
-        /**
-         * Flag used to determine if indexedBuffer has been generated
-         *
-         * @internal
-         * @ignore
-         */
-        this.bIndexed = false;
-        /**
-         * Array used for index a vertex buffer
-         * only for first level scene children
-         *
-         * @internal
-         * @ignore
-         */
-        this.indexedBuffer = [];
-        /**
-         * The bounding inside the scene
-         *
-         * @type {IShapeBounding}
-         */
-        this.bounding = {
-            cx: 0,
-            cy: 0,
-            x: -1,
-            y: -1,
-            width: 2,
-            height: 2,
-        };
-        this.props = {
-            distance: settings.distance,
-            repetitions: settings.repetitions,
-            rotateX: settings.rotateX,
-            rotateY: settings.rotateY,
-            rotateZ: settings.rotateZ,
-            skewX: settings.skewX,
-            skewY: settings.skewY,
-            squeezeX: settings.squeezeX,
-            squeezeY: settings.squeezeY,
-            displace: settings.displace,
-            translate: settings.translate,
-            scale: settings.scale,
-            transformOrigin: settings.transformOrigin,
-            perspective: settings.perspective,
-            perspectiveOrigin: settings.perspectiveOrigin,
-        };
-        this.anchor =
-            settings.anchor && Array.isArray(settings.anchor)
-                ? [
-                    typeof settings.anchor[0] === 'number'
-                        ? Utilities_1.clamp(-1, 1, settings.anchor[0]) * -1
-                        : settings.anchor[0] === 'left'
-                            ? 1
-                            : settings.anchor[0] === 'right'
-                                ? -1
-                                : 0,
-                    typeof settings.anchor[1] === 'number'
-                        ? Utilities_1.clamp(-1, 1, settings.anchor[1]) * -1
-                        : settings.anchor[1] === 'top'
-                            ? 1
-                            : settings.anchor[1] === 'bottom'
-                                ? -1
-                                : 0,
-                ]
-                : [0, 0];
-        this.boundingType =
-            typeof settings.boundingType === 'string'
-                ? settings.boundingType === 'relative'
-                    ? types_1.EBoundingType.Relative
-                    : types_1.EBoundingType.Fixed
-                : settings.boundingType || types_1.EBoundingType.Fixed;
-        this.vertexCallback = settings.vertexCallback;
-    }
-    /**
-     * Check if the shape should be generated every time
-     *
-     * @returns {boolean}
-     */
-    isStatic() {
-        const props = this.props;
-        return (typeof props.repetitions !== 'function' &&
-            typeof props.distance !== 'function' &&
-            typeof props.displace !== 'function' &&
-            typeof props.scale !== 'function' &&
-            typeof props.translate !== 'function' &&
-            typeof props.skewX !== 'function' &&
-            typeof props.skewY !== 'function' &&
-            typeof props.squeezeX !== 'function' &&
-            typeof props.squeezeY !== 'function' &&
-            typeof props.rotateX !== 'function' &&
-            typeof props.rotateY !== 'function' &&
-            typeof props.rotateZ !== 'function' &&
-            typeof props.transformOrigin !== 'function' &&
-            typeof props.perspective !== 'function' &&
-            typeof props.perspectiveOrigin !== 'function');
-    }
-    /**
-     * Check if the indexedBuffer array needs to be recreated every time,
-     * this can happen when a shape generates an array of vertices different in length at each repetition
-     *
-     * @returns {boolean}
-     */
-    isStaticIndexed() {
-        return typeof this.props.repetitions !== 'function';
-    }
-    /**
-     * Return a prop value
-     *
-     * @param {keyof ISceneChildProps} key
-     * @param {PropArguments} [propArguments]
-     * @param {*} [defaultValue]
-     * @returns {*}
-     */
-    getProp(key, propArguments, defaultValue) {
-        let attribute = this.props[key];
-        if (typeof attribute === 'function') {
-            attribute = attribute(propArguments);
-        }
-        return typeof attribute === 'undefined' || Number.isNaN(attribute) ? defaultValue : attribute;
-    }
-    /**
-     * Set a single or multiple props
-     *
-     * @param {(keyof ISceneChildProps<PropArguments> | ISceneChildProps<PropArguments>)} key
-     * @param {*} [value]
-     * @param {boolean} [bClearIndexed=false]
-     */
-    setProp(key, value, bClearIndexed = false) {
-        if (typeof key === 'string') {
-            bClearIndexed = bClearIndexed || key == 'repetitions';
-            this.props[key] = value;
-        }
-        else {
-            bClearIndexed = bClearIndexed || 'repetitions' in key;
-            Object.keys(key).forEach((k) => (this.props[k] = key[k]));
-        }
-        this.clearBuffer(bClearIndexed, true);
-    }
-    /**
-     *  Unset buffer
-     *
-     * @param {boolean} [bClearIndexed=false]
-     * @param {boolean} [bPropagateToParents=false]
-     * @param {boolean} [bPropagateToChildren=false]
-     */
-    clearBuffer(bClearIndexed = false, bPropagateToParents = true) {
-        this.buffer = undefined;
-        if (bClearIndexed) {
-            this.bIndexed = false;
-            this.indexedBuffer = [];
-        }
-        this.bStatic = this.isStatic();
-        this.bStaticIndexed = this.isStaticIndexed();
-        if (bPropagateToParents && this.scene && !this.scene.isFirstLevelChild(this)) {
-            const parents = this.scene.getParentsOfSceneChild(this);
-            parents.length > 0 && parents[parents.length - 1].clearBuffer(bClearIndexed, bPropagateToParents /* true */);
-        }
-    }
-    /**
-     * Update the vertex array if the shape is not static and update the indexedBuffer if it is also not static
-     *
-     * @param {number} generateId generation id
-     * @param {boolean} [bDirectSceneChild=false] adjust shape of center of scene
-     * @param {PropArguments} [parentPropArguments]
-     */
-    generate(generateId = 0, bDirectSceneChild = false, parentPropArguments) {
-        var _a, _b;
-        if (this.buffer && this.bStatic) {
-            return;
-        }
-        this.generateId = generateId;
-        if (!this.bStaticIndexed || !this.bIndexed)
-            this.indexedBuffer = [];
-        const propArguments = ShapeBase.getEmptyPropArguments(this, parentPropArguments);
-        const repetition = propArguments.repetition;
-        const repetitions = this.getProp('repetitions', propArguments, 1);
-        const repetitionType = Array.isArray(repetitions) ? types_1.ERepetitionType.Matrix : types_1.ERepetitionType.Ring;
-        const repetitionCount = Array.isArray(repetitions)
-            ? repetitions[0] * ((_a = repetitions[1]) !== null && _a !== void 0 ? _a : repetitions[0])
-            : repetitions;
-        const repetitionRowCount = Array.isArray(repetitions) ? repetitions[0] : repetitionCount;
-        const repetitionColCount = Array.isArray(repetitions) ? (_b = repetitions[1]) !== null && _b !== void 0 ? _b : repetitions[0] : 1;
-        const rowRepetition = repetition.row;
-        rowRepetition.count = repetitionRowCount;
-        const colRepetition = repetition.col;
-        colRepetition.count = repetitionColCount;
-        repetition.count = repetitionCount;
-        repetition.col.count = repetitionColCount;
-        repetition.row.count = repetitionRowCount;
-        repetition.type = repetitionType;
-        let totalBufferLength = 0;
-        const buffers = [];
-        let currentIndex = 0;
-        const centerMatrix = gl_matrix_1.vec2.fromValues((repetitionColCount - 1) / 2, (repetitionRowCount - 1) / 2);
-        const sceneAnchor = this.scene ? [this.scene.anchor[0], this.scene.anchor[1], 0] : [0, 0, 0];
-        const tmpTotalShapeBounding = [undefined, undefined, undefined, undefined];
-        const tmpSingleRepetitionBounding = [undefined, undefined, undefined, undefined];
-        for (let currentRowRepetition = 0; currentRowRepetition < repetitionRowCount; currentRowRepetition++) {
-            for (let currentColRepetition = 0; currentColRepetition < repetitionColCount; currentColRepetition++, currentIndex++) {
-                repetition.index = currentIndex + 1;
-                repetition.offset = repetitionCount > 1 ? currentIndex / (repetitionCount - 1) : 1;
-                repetition.angle = repetitionType === types_1.ERepetitionType.Ring ? (math_1.PI2 / repetitionCount) * currentIndex : 0;
-                colRepetition.index = currentColRepetition + 1;
-                colRepetition.offset = repetitionColCount > 1 ? currentColRepetition / (repetitionColCount - 1) : 1;
-                rowRepetition.index = currentRowRepetition + 1;
-                rowRepetition.offset = repetitionRowCount > 1 ? currentRowRepetition / (repetitionRowCount - 1) : 1;
-                // Generate primitives buffer recursively
-                const buffer = this.generateBuffer(generateId, propArguments);
-                const bufferLength = buffer.length;
-                const bounding = this.getShapeBounding();
-                buffers[currentIndex] = new Float32Array(bufferLength);
-                totalBufferLength += bufferLength;
-                {
-                    const distance = glme.toVec2(this.getProp('distance', propArguments, glme.VEC2_ZERO));
-                    const displace = this.getProp('displace', propArguments, 0);
-                    const scale = glme.toVec3(this.getProp('scale', propArguments, glme.VEC2_ONE), 1);
-                    const translate = glme.toVec3(this.getProp('translate', propArguments, glme.VEC2_ZERO), 0);
-                    const skewX = this.getProp('skewX', propArguments, 0);
-                    const skewY = this.getProp('skewY', propArguments, 0);
-                    const squeezeX = this.getProp('squeezeX', propArguments, 0);
-                    const squeezeY = this.getProp('squeezeY', propArguments, 0);
-                    const rotateX = this.getProp('rotateX', propArguments, 0);
-                    const rotateY = this.getProp('rotateY', propArguments, 0);
-                    const rotateZ = this.getProp('rotateZ', propArguments, 0);
-                    const perspective = Utilities_1.clamp(0, 1, this.getProp('perspective', propArguments, 0));
-                    const perspectiveOrigin = glme.toVec3(this.getProp('perspectiveOrigin', propArguments, glme.VEC2_ZERO), 0);
-                    const transformOrigin = glme.toVec3(this.getProp('transformOrigin', propArguments, glme.VEC2_ZERO), 0);
-                    let offset;
-                    switch (repetitionType) {
-                        case types_1.ERepetitionType.Ring:
-                            offset = gl_matrix_1.vec3.fromValues(distance[0], 0, 0);
-                            gl_matrix_1.vec3.rotateZ(offset, offset, glme.VEC3_ZERO, repetition.angle + displace);
-                            break;
-                        case types_1.ERepetitionType.Matrix:
-                            offset = gl_matrix_1.vec3.fromValues(distance[1] * (currentColRepetition - centerMatrix[0]), distance[0] * (currentRowRepetition - centerMatrix[1]), 0);
-                            break;
-                    }
-                    const perspectiveSize = perspective > 0 ? Math.max(bounding.width, bounding.height) / 2 : 1;
-                    const perspectiveValue = perspective > 0 ? perspectiveSize + (1 - perspective) * (perspectiveSize * 10) : 0;
-                    const bTransformOrigin = (this.boundingType === types_1.EBoundingType.Relative ? bounding.cx !== 0 || bounding.cy !== 0 : true) ||
-                        perspective !== 0 ||
-                        transformOrigin[0] !== 0 ||
-                        transformOrigin[1] !== 0;
-                    const bPerspectiveOrigin = perspectiveOrigin[0] !== 0 || perspectiveOrigin[1] !== 0;
-                    if (bTransformOrigin) {
-                        if (this.boundingType === types_1.EBoundingType.Relative) {
-                            transformOrigin[0] = transformOrigin[0] * (bounding.width / 2) + bounding.cx;
-                            transformOrigin[1] = transformOrigin[1] * (bounding.height / 2) + bounding.cy;
-                        }
-                        else {
-                            transformOrigin[0] *= bounding.width / 2;
-                            transformOrigin[1] *= bounding.height / 2;
-                        }
-                        transformOrigin[2] = perspectiveValue;
-                    }
-                    /**
-                     * Create Matrices
-                     */
-                    {
-                        /**
-                         * Create Transformation matrix
-                         */
-                        gl_matrix_1.mat4.identity(transformMatrix);
-                        bTransformOrigin && gl_matrix_1.mat4.translate(transformMatrix, transformMatrix, transformOrigin);
-                        if (translate[0] !== 0 || translate[1] !== 0)
-                            gl_matrix_1.mat4.translate(transformMatrix, transformMatrix, translate);
-                        if (skewX !== 0 || skewY !== 0) {
-                            glme.fromSkew(tmpMatrix, [skewX, skewY]);
-                            gl_matrix_1.mat4.multiply(transformMatrix, transformMatrix, tmpMatrix);
-                        }
-                        rotateX !== 0 && gl_matrix_1.mat4.rotateX(transformMatrix, transformMatrix, rotateX);
-                        rotateY !== 0 && gl_matrix_1.mat4.rotateY(transformMatrix, transformMatrix, rotateY);
-                        rotateZ !== 0 && gl_matrix_1.mat4.rotateZ(transformMatrix, transformMatrix, rotateZ);
-                        if (scale[0] !== 1 || scale[1] !== 1)
-                            gl_matrix_1.mat4.scale(transformMatrix, transformMatrix, scale);
-                        bTransformOrigin &&
-                            gl_matrix_1.mat4.translate(transformMatrix, transformMatrix, gl_matrix_1.vec3.scale(transformOrigin, transformOrigin, -1));
-                        /**
-                         * Create Perspective matrix
-                         */
-                        if (perspectiveValue > 0) {
-                            if (bPerspectiveOrigin) {
-                                if (this.boundingType === types_1.EBoundingType.Relative) {
-                                    perspectiveOrigin[0] = perspectiveOrigin[0] * (bounding.width / 2) + bounding.cx;
-                                    perspectiveOrigin[1] = perspectiveOrigin[1] * (bounding.height / 2) + bounding.cy;
-                                }
-                                else {
-                                    perspectiveOrigin[0] *= bounding.width / 2;
-                                    perspectiveOrigin[1] *= bounding.height / 2;
-                                }
-                                perspectiveOrigin[2] = 0;
-                            }
-                            gl_matrix_1.mat4.perspective(perspectiveMatrix, -Math.PI / 2, 1, 0, Infinity);
-                        }
-                        /**
-                         * Create Repetition matrix
-                         */
-                        gl_matrix_1.mat4.identity(repetitionMatrix);
-                        gl_matrix_1.mat4.translate(repetitionMatrix, repetitionMatrix, offset);
-                        if (bDirectSceneChild) {
-                            gl_matrix_1.mat4.translate(repetitionMatrix, repetitionMatrix, sceneAnchor);
-                        }
-                        /**
-                         * Apply anchor
-                         */
-                        const shapeAnchor = [this.anchor[0] * (bounding.width / 2), this.anchor[1] * (bounding.height / 2), 0];
-                        gl_matrix_1.mat4.translate(repetitionMatrix, repetitionMatrix, shapeAnchor);
-                        if (repetitionType === types_1.ERepetitionType.Ring)
-                            gl_matrix_1.mat4.rotateZ(repetitionMatrix, repetitionMatrix, repetition.angle + displace);
-                    }
-                    Adapt_1.Bounding.clear(tmpSingleRepetitionBounding);
-                    // Apply matrices on vertex
-                    for (let bufferIndex = 0; bufferIndex < bufferLength; bufferIndex += 2) {
-                        const vertex = [buffer[bufferIndex], buffer[bufferIndex + 1], perspectiveValue];
-                        {
-                            // Apply squeeze, can be insert into transformMatrix?
-                            squeezeX !== 0 && Vec2_1.default.squeezeX(vertex, squeezeX);
-                            squeezeY !== 0 && Vec2_1.default.squeezeY(vertex, squeezeY);
-                            // Apply transforms
-                            gl_matrix_1.vec3.transformMat4(vertex, vertex, transformMatrix);
-                            // Apply perspective
-                            if (perspectiveValue > 0) {
-                                bPerspectiveOrigin && gl_matrix_1.vec3.add(vertex, vertex, perspectiveOrigin);
-                                gl_matrix_1.vec3.transformMat4(vertex, vertex, perspectiveMatrix);
-                                gl_matrix_1.vec3.scale(vertex, vertex, perspectiveValue);
-                                bPerspectiveOrigin && gl_matrix_1.vec3.sub(vertex, vertex, perspectiveOrigin);
-                            }
-                            // apply repetition matrix
-                            gl_matrix_1.vec3.transformMat4(vertex, vertex, repetitionMatrix);
-                            // custom vertex manipulation
-                            if (typeof this.vertexCallback !== 'undefined') {
-                                const index = bufferIndex / 2;
-                                const count = bufferLength / 2;
-                                const vertexRepetition = {
-                                    index: index + 1,
-                                    count,
-                                    offset: count > 1 ? index / (count - 1) : 1,
-                                };
-                                this.vertexCallback(vertex, vertexRepetition, propArguments);
-                            }
-                        }
-                        buffers[currentIndex][bufferIndex] = vertex[0];
-                        buffers[currentIndex][bufferIndex + 1] = vertex[1];
-                        Adapt_1.Bounding.add(tmpSingleRepetitionBounding, vertex[0], vertex[1]);
-                        Adapt_1.Bounding.add(tmpTotalShapeBounding, vertex[0], vertex[1]);
-                    }
-                }
-                // Bounding.sum(tmpTotalShapeBounding, tmpSingleRepetitionBounding)
-                // After buffer creation, add a frame into indexedBuffer if not static or update bounding
-                const singleRepetitionBounding = { cx: 0, cy: 0, x: -1, y: -1, width: 2, height: 2 };
-                Adapt_1.Bounding.bind(singleRepetitionBounding, tmpSingleRepetitionBounding);
-                if (!this.bStaticIndexed || !this.bIndexed) {
-                    this.addIndex(bufferLength, repetition, singleRepetitionBounding);
-                }
-            }
-        }
-        Adapt_1.Bounding.bind(this.bounding, tmpTotalShapeBounding);
-        this.buffer = new Float32Array(totalBufferLength);
-        for (let i = 0, offset = 0, len = buffers.length; i < len; offset += buffers[i].length, i++)
-            this.buffer.set(buffers[i], offset);
-        this.bIndexed = true;
-    }
-    /**
-     * Return current shape (whit repetions) bounding
-     *
-     * @return {*}  {IShapeBounding}
-     */
-    getBounding() {
-        return this.bounding;
-    }
-    /**
-     * Get number of repetitions
-     *
-     * @returns {number}
-     */
-    getRepetitionCount() {
-        var _a;
-        const repetitions = this.getProp('repetitions', undefined, 1);
-        return Array.isArray(repetitions) ? repetitions[0] * ((_a = repetitions[1]) !== null && _a !== void 0 ? _a : repetitions[0]) : repetitions;
-    }
-    /**
-     * Return buffer
-     *
-     * @returns {(Float32Array | undefined)}
-     */
-    getBuffer() {
-        return this.buffer;
-    }
-    /**
-     * Return indexed buffer
-     *
-     * @returns {(Array<IBufferIndex<Props, PropArguments>> | undefined)}
-     */
-    getIndexedBuffer() {
-        return this.indexedBuffer;
-    }
-    /**
-     * Return number of encapsulation
-     *
-     * @param {IBufferIndex} index
-     * @returns {number}
-     */
-    static getIndexParentLevel(index) {
-        if (typeof index.parent === 'undefined')
-            return 0;
-        let currentParent = index.parent;
-        let currentParentLevel = 1;
-        while (typeof currentParent.parent !== 'undefined') {
-            currentParentLevel++;
-            currentParent = currentParent.parent;
-        }
-        return currentParentLevel;
-    }
-    /**
-     * Stream buffer
-     *
-     * @param {(TStreamCallback} callback
-     */
-    stream(callback) {
-        if (this.buffer && this.indexedBuffer) {
-            for (let i = 0, j = 0, len = this.indexedBuffer.length; i < len; i++) {
-                const currentIndexing = this.indexedBuffer[i];
-                callback({
-                    buffer: this.buffer,
-                    frameLength: currentIndexing.frameLength,
-                    frameBufferIndex: j,
-                    currentIndexing: currentIndexing,
-                    currentShapeIndex: i,
-                    totalShapes: len,
-                });
-                j += currentIndexing.frameLength;
-            }
-        }
-    }
-    /**
-     * Return empty propArguments
-     *
-     * @static
-     * @param {ShapeBase} shape
-     * @return {*}  {PropArguments}
-     */
-    static getEmptyPropArguments(shape, parentPropArguments) {
-        const repetition = {
-            type: types_1.ERepetitionType.Ring,
-            angle: 0,
-            index: 1,
-            offset: 1,
-            count: 1,
-            row: { index: 1, offset: 1, count: 1 },
-            col: { index: 1, offset: 1, count: 1 },
-        };
-        return {
-            repetition,
-            shape,
-            parent: parentPropArguments,
-        };
-    }
-}
-exports.ShapeBase = ShapeBase;
-/**
- * Empty buffer
- *
+ * @category Types & Interfaces.Repetitions
  * @internal
- * @ignore
  */
-ShapeBase.EMPTY_BUFFER = new Float32Array(0);
-/**
- * Empty BaseRepetition
- *
- * @internal
- * @ignore
- */
-ShapeBase.getEmptySimpleRepetition = () => ({
-    index: 1,
-    offset: 1,
-    count: 1,
-});
-/**
- * Empty Repetition
- *
- * @internal
- * @ignore
- */
-ShapeBase.getEmptyRepetition = () => ({
-    type: types_1.ERepetitionType.Ring,
-    angle: 0,
-    ...ShapeBase.getEmptySimpleRepetition(),
-    row: ShapeBase.getEmptySimpleRepetition(),
-    col: ShapeBase.getEmptySimpleRepetition(),
-});
-//# sourceMappingURL=ShapeBase.js.map
+var ERepetitionType;
+(function (ERepetitionType) {
+    /**
+     * Defines the type of repetition of the shape,
+     * in a circular way starting from the center of the scene
+     * @order 1
+     */
+    ERepetitionType[ERepetitionType["Ring"] = 1] = "Ring";
+    /**
+     * Defines the type of repetition of the shape,
+     * on a nxm grid starting from the center of the scene
+     * @order 2
+     */
+    ERepetitionType[ERepetitionType["Matrix"] = 2] = "Matrix";
+})(ERepetitionType = exports.ERepetitionType || (exports.ERepetitionType = {}));
+//# sourceMappingURL=repetitions.js.map
 
 /***/ }),
-/* 25 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_268727__) => {
+/* 28 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+//# sourceMappingURL=scene-child.js.map
+
+/***/ }),
+/* 29 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+//# sourceMappingURL=scene.js.map
+
+/***/ }),
+/* 30 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EBoundingType = void 0;
+/**
+ *
+ * @category Enums
+ * @export
+ * @enum {number}
+ */
+var EBoundingType;
+(function (EBoundingType) {
+    /**
+     * Relative to the real bounding of the shape
+     * @order 2
+     */
+    EBoundingType[EBoundingType["Relative"] = 1] = "Relative";
+    /**
+     * Fixed to te width and height of the shape
+     * @order 3
+     */
+    EBoundingType[EBoundingType["Fixed"] = 2] = "Fixed";
+})(EBoundingType = exports.EBoundingType || (exports.EBoundingType = {}));
+//# sourceMappingURL=shape-base.js.map
+
+/***/ }),
+/* 31 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+//////
+//# sourceMappingURL=shape-primitives.js.map
+
+/***/ }),
+/* 32 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// Shape
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+//# sourceMappingURL=shapes.js.map
+
+/***/ }),
+/* 33 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.toVec3 = exports.toVec2 = exports.fromSkew = exports.VEC2_ONE = exports.VEC2_ZERO = exports.VEC3_ONE = exports.VEC3_ZERO = void 0;
-const gl_matrix_1 = __nested_webpack_require_268727__(10);
+const gl_matrix_1 = __webpack_require__(13);
 exports.VEC3_ZERO = [0, 0, 0];
 exports.VEC3_ONE = [1, 1, 1];
 exports.VEC2_ZERO = [0, 0];
@@ -17261,7 +17360,7 @@ exports.toVec3 = toVec3;
 //# sourceMappingURL=gl-matrix-extensions.js.map
 
 /***/ }),
-/* 26 */
+/* 34 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -17277,7 +17376,7 @@ const MATRIX = new Array(4);
 /**
  * Vec2 operation
  *
- * @category Core.Utilities
+ * @category Math
  */
 const Vec2 = {
     /**
@@ -17480,7 +17579,7 @@ exports.default = Vec2;
 //# sourceMappingURL=Vec2.js.map
 
 /***/ }),
-/* 27 */
+/* 35 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -17490,7 +17589,7 @@ exports.mod = exports.PHI = exports.PI2 = exports.log = void 0;
 /**
  * Return logarith value and base
  *
- * @category Core.Utilities
+ * @category Utilities
  *
  * @param n number
  * @param base number
@@ -17498,17 +17597,17 @@ exports.mod = exports.PHI = exports.PI2 = exports.log = void 0;
 const log = (n, base) => Math.log(n) / Math.log(base);
 exports.log = log;
 /**
- * @category Core.Utilities
+ * @category Utilities
  */
 exports.PI2 = Math.PI * 2;
 /**
- * @category Core.Utilities
+ * @category Utilities
  */
 exports.PHI = (1 + Math.sqrt(5)) / 2;
 /**
  * Return a positive module of positive or negative value
  *
- * @category Core.Utilities
+ * @category Utilities
  *
  * @param value number
  * @param base number
@@ -17521,18 +17620,16 @@ exports.mod = mod;
 //# sourceMappingURL=index.js.map
 
 /***/ }),
-/* 28 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_275808__) => {
+/* 36 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Adapt = exports.Bounding = exports.EAdaptMode = void 0;
-const Modifier_1 = __nested_webpack_require_275808__(29);
+const Modifier_1 = __webpack_require__(37);
 /**
- *
- *
- * @category Core.Enums
+ * @category Modifiers.Enums
  */
 var EAdaptMode;
 (function (EAdaptMode) {
@@ -17632,6 +17729,13 @@ exports.Bounding = {
         }
     },
 };
+/**
+ * Fit a buffer into a rectangle based on EAdaptMode
+ *
+ * @category Modifiers
+ * @class Adapt
+ * @extends {Modifier}
+ */
 class Adapt extends Modifier_1.Modifier {
     constructor(args) {
         super();
@@ -17693,30 +17797,36 @@ Adapt.MODES = EAdaptMode;
 //# sourceMappingURL=Adapt.js.map
 
 /***/ }),
-/* 29 */
+/* 37 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Modifier = void 0;
+/**
+ * Manipulate a buffer after generating
+ *
+ * @abstract
+ * @category Modifiers
+ * @class Modifier
+ */
 class Modifier {
 }
 exports.Modifier = Modifier;
 //# sourceMappingURL=Modifier.js.map
 
 /***/ }),
-/* 30 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_281712__) => {
+/* 38 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.distributePointsInBuffer = exports.interpolate = exports.prepareBufferForInterpolation = exports.distanceFromRepetition = exports.angle2FromRepetition = exports.angleFromRepetition = exports.random = exports.noise = exports.relativeClamp = exports.clamp = exports.lerp = exports.toRadians = exports.toDegrees = exports.now = void 0;
-const SimplexNoise = __nested_webpack_require_281712__(31);
-const repetitions_1 = __nested_webpack_require_281712__(4);
-const Vec2_1 = __nested_webpack_require_281712__(26);
-// isDef: (object: any): boolean => typeof object !== 'undefined' && object !== null,
+exports.interpolate = exports.prepareBufferForInterpolation = exports.distributePointsInBuffer = exports.distanceFromRepetition = exports.angle2FromRepetition = exports.angleFromRepetition = exports.random = exports.noise = exports.relativeClamp = exports.clamp = exports.lerp = exports.toRadians = exports.toDegrees = exports.now = void 0;
+const SimplexNoise = __webpack_require__(39);
+const repetitions_1 = __webpack_require__(27);
+const Vec2_1 = __webpack_require__(34);
 const measurement = typeof performance !== 'undefined' ? performance : Date;
 /**
  * Get current timestamp in milliseconds
@@ -17763,13 +17873,6 @@ function toRadians(degrees) {
     return (degrees * Math.PI) / 180;
 }
 exports.toRadians = toRadians;
-// perf: (name: string, callback: any, log: boolean = false): number => {
-// 	const t1 = now()
-// 	callback()
-// 	const t2 = now()
-// 	log && console.log('perf ' + name + ': ' + (t2 - t1))
-// 	return t2 - t1
-// }
 /**
  * Linear interpolation from `a` when `i` as 0 an `b` when `i' as 1
  *
@@ -17850,13 +17953,23 @@ function noise(seed = 'random', x = 0, y = 0, z = 0) {
 }
 exports.noise = noise;
 /**
- * Random number generator
+ * @internal
+ * @ignore
  */
 const randoms = {};
 /**
- * random number generator
- * @param seed
- * @returns
+ * Random number generator
+ * @example
+ * ```javascript
+ * 	Urpflanze.random('seed') // 0.9367527104914188
+ * ```
+ *
+ * @category Utilities
+ * @param {string} seed
+ * @param {number} min
+ * @param {number} max
+ * @param {number} decimals
+ * @returns {number}
  */
 function random(seed, min = 0, max = 1, decimals) {
     const key = seed + '';
@@ -17977,64 +18090,22 @@ function distanceFromRepetition(repetition, offsetFromCenter = [0, 0]) {
 exports.distanceFromRepetition = distanceFromRepetition;
 /// Interpolation
 /**
+ * Evenly distributes a number of points in a buffer
  *
- * @param from
- * @param to
- * @returns
+ * @category Utilities.Buffer interpolation
+ * @export
+ * @param {Float32Array} buffer current buffer
+ * @param {number} pointsToAdd points to add
+ * @return {*}  {Float32Array}
  */
-function prepareBufferForInterpolation(from, to) {
-    const fromBufferLength = from.length;
-    const toBufferLength = to.length;
-    if (fromBufferLength === toBufferLength) {
-        return [from, to];
-    }
-    const maxBufferLength = fromBufferLength > toBufferLength ? fromBufferLength : toBufferLength;
-    const difference = Math.abs(fromBufferLength - toBufferLength);
-    const minBufferLength = maxBufferLength - difference;
-    /////
-    const b = fromBufferLength < toBufferLength ? to : from;
-    const t = fromBufferLength < toBufferLength ? from : to;
-    const a = distributePointsInBuffer(t, Math.floor(difference / 2));
-    // a[maxBufferLength - 2] = t[minBufferLength - 2]
-    // a[maxBufferLength - 1] = t[minBufferLength - 1]
-    return fromBufferLength > toBufferLength ? [b, a] : [a, b];
-}
-exports.prepareBufferForInterpolation = prepareBufferForInterpolation;
-/**
- *
- * @param from
- * @param to
- * @param offset
- * @returns
- */
-function interpolate(from, to, initialOffset = 0.5) {
-    const [a, b] = prepareBufferForInterpolation(from, to);
-    const maxBufferLength = Math.max(a.length, b.length);
-    const offset = typeof initialOffset === 'number' ? [initialOffset] : initialOffset;
-    const maxPoints = maxBufferLength / 2;
-    if (offset.length !== maxPoints) {
-        const tl = offset.length;
-        for (let i = 0; i < maxPoints; i++) {
-            offset[i] = offset[i % tl];
-        }
-    }
-    ////
-    const result = new Float32Array(maxBufferLength);
-    for (let i = 0, off = 0; i < maxBufferLength; i += 2, off++) {
-        result[i] = (1 - offset[off]) * a[i] + offset[off] * b[i];
-        result[i + 1] = (1 - offset[off]) * a[i + 1] + offset[off] * b[i + 1];
-    }
-    return result;
-}
-exports.interpolate = interpolate;
-function distributePointsInBuffer(buffer, count) {
+function distributePointsInBuffer(buffer, pointsToAdd) {
     const bufferLen = buffer.length;
     const pointsLen = bufferLen / 2;
-    const finalBufferLength = (pointsLen + count) * 2;
+    const finalBufferLength = (pointsLen + pointsToAdd) * 2;
     const edges = pointsLen - 1;
     if (edges > 1) {
         const lastPoint = bufferLen - 2;
-        const newPointsOnEdge = Math.floor(count / edges);
+        const newPointsOnEdge = Math.floor(pointsToAdd / edges);
         const bufferWithPointsEveryEdge = bufferLen + newPointsOnEdge * lastPoint;
         let remainingPoints = (finalBufferLength - bufferWithPointsEveryEdge) / 2;
         const edgeRemainingIndex = Math.round(edges / remainingPoints);
@@ -18070,11 +18141,66 @@ function distributePointsInBuffer(buffer, count) {
     return result;
 }
 exports.distributePointsInBuffer = distributePointsInBuffer;
+/**
+ * Leads two buffers to have the same number of points
+ *
+ * @category Utilities.Buffer interpolation
+ * @param from
+ * @param to
+ * @returns
+ */
+function prepareBufferForInterpolation(from, to) {
+    const fromBufferLength = from.length;
+    const toBufferLength = to.length;
+    if (fromBufferLength === toBufferLength) {
+        return [from, to];
+    }
+    // const maxBufferLength = fromBufferLength > toBufferLength ? fromBufferLength : toBufferLength
+    const difference = Math.abs(fromBufferLength - toBufferLength);
+    // const minBufferLength = maxBufferLength - difference
+    /////
+    const b = fromBufferLength < toBufferLength ? to : from;
+    const t = fromBufferLength < toBufferLength ? from : to;
+    const a = distributePointsInBuffer(t, Math.floor(difference / 2));
+    // a[maxBufferLength - 2] = t[minBufferLength - 2]
+    // a[maxBufferLength - 1] = t[minBufferLength - 1]
+    return fromBufferLength > toBufferLength ? [b, a] : [a, b];
+}
+exports.prepareBufferForInterpolation = prepareBufferForInterpolation;
+/**
+ * Interpolate two buffer
+ *
+ * @category Utilities.Buffer interpolation
+ * @param from
+ * @param to
+ * @param offset
+ * @returns
+ */
+function interpolate(from, to, initialOffset = 0.5) {
+    const [a, b] = prepareBufferForInterpolation(from, to);
+    const maxBufferLength = Math.max(a.length, b.length);
+    const offset = typeof initialOffset === 'number' ? [initialOffset] : initialOffset;
+    const maxPoints = maxBufferLength / 2;
+    if (offset.length !== maxPoints) {
+        const tl = offset.length;
+        for (let i = 0; i < maxPoints; i++) {
+            offset[i] = offset[i % tl];
+        }
+    }
+    ////
+    const result = new Float32Array(maxBufferLength);
+    for (let i = 0, off = 0; i < maxBufferLength; i += 2, off++) {
+        result[i] = (1 - offset[off]) * a[i] + offset[off] * b[i];
+        result[i + 1] = (1 - offset[off]) * a[i + 1] + offset[off] * b[i + 1];
+    }
+    return result;
+}
+exports.interpolate = interpolate;
 //# sourceMappingURL=Utilities.js.map
 
 /***/ }),
-/* 31 */
-/***/ ((module, exports, __nested_webpack_require_293561__) => {
+/* 39 */
+/***/ ((module, exports, __webpack_require__) => {
 
 var __WEBPACK_AMD_DEFINE_RESULT__;/*
  * A fast javascript implementation of simplex noise by Jonas Wagner
@@ -18538,7 +18664,7 @@ Better rank ordering method by Stefan Gustavson in 2012.
   }
 
   // amd
-  if (true) !(__WEBPACK_AMD_DEFINE_RESULT__ = (function() {return SimplexNoise;}).call(exports, __nested_webpack_require_293561__, exports, module),
+  if (true) !(__WEBPACK_AMD_DEFINE_RESULT__ = (function() {return SimplexNoise;}).call(exports, __webpack_require__, exports, module),
 		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
   // common js
   if (true) exports.SimplexNoise = SimplexNoise;
@@ -18553,81 +18679,95 @@ Better rank ordering method by Stefan Gustavson in 2012.
 
 
 /***/ }),
-/* 32 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_310668__) => {
+/* 40 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Shape = void 0;
-const Scene_1 = __nested_webpack_require_310668__(21);
-const SceneChild_1 = __nested_webpack_require_310668__(22);
-const ShapeBase_1 = __nested_webpack_require_310668__(24);
+exports.ShapeBuffer = void 0;
+const Adapt_1 = __webpack_require__(36);
+const ShapePrimitive_1 = __webpack_require__(41);
 /**
- * Container of ShapeBase or Group, it applies transformations on each repetition
+ * Create a shape from static buffer
  *
- * @category Core.Shapes
+ * @category Shapes.Primitives
  */
-class Shape extends ShapeBase_1.ShapeBase {
+class ShapeBuffer extends ShapePrimitive_1.ShapePrimitive {
     /**
-     * Creates an instance of Shape.
+     * Creates an instance of ShapeBuffer.
      *
-     * @param {ShapeSettings} [settings={}]
+     * @param {IShapeBufferSettings} [settings={}]
      */
-    constructor(settings) {
-        settings.type = settings.type || 'Shape';
+    constructor(settings = {}) {
+        var _a, _b;
+        settings.type = settings.type || 'ShapeBuffer';
+        settings.adaptMode = (_a = settings.adaptMode) !== null && _a !== void 0 ? _a : Adapt_1.EAdaptMode.Scale;
         super(settings);
-        if (settings.shape instanceof SceneChild_1.SceneChild) {
-            this.shape = settings.shape;
+        this.adaptMode = (_b = settings.adaptMode) !== null && _b !== void 0 ? _b : Adapt_1.EAdaptMode.Fill;
+        if (typeof settings.shape === 'undefined') {
+            console.warn('[Urpflanze:ShapeBuffer] ShapeBuffer require a buffer passed from `shape` property');
+            this.shape = ShapeBuffer.EMPTY_BUFFER;
         }
         else {
-            console.warn("[Urpflanze:Shape] requires the 'shape' property to be instance of SceneChild,\nYou passed:", settings.shape);
+            this.shape = typeof settings.shape !== 'function' ? Adapt_1.Adapt.adapt(settings.shape, this.adaptMode) : settings.shape;
         }
-        this.shapeUseParent = !!settings.shapeUseParent;
         this.bStatic = this.isStatic();
         this.bStaticIndexed = this.isStaticIndexed();
     }
     /**
-     * Check if shape is static
+     * Check shape is static
      *
-     * @returns {boolean}
+     * @returns boolean
      */
     isStatic() {
-        // return super.isStatic() && !this.shapeUseParent
-        return super.isStatic() && (this.shape ? this.shape.isStatic() : true);
+        return typeof this.shape !== 'function' && super.isStatic();
     }
     /**
-     * Check if shape has static index
+     * Check shape is static indexed
      *
-     * @returns {boolean}
+     * @returns boolean
      */
     isStaticIndexed() {
-        return super.isStaticIndexed() && (this.shape ? this.shape.isStaticIndexed() : true);
+        return typeof this.shape !== 'function' && super.isStaticIndexed();
     }
     /**
-     * Find shape by id or name
+     *  Unset buffer
      *
-     * @param {number | string} idOrName
-     * @returns {(SceneChild | null)}
+     * @param {boolean} [bClearIndexed=false]
+     * @param {boolean} [bPropagateToParents=false]
      */
-    find(idOrName) {
-        if (this.id === idOrName || this.name === idOrName)
-            return this;
-        if (this.shape)
-            return this.shape.find(idOrName);
-        return null;
+    clearBuffer(bClearIndexed = false, bPropagateToParents = true) {
+        super.clearBuffer(bClearIndexed, bPropagateToParents);
+        this.shapeBuffer = undefined;
+    }
+    /**
+     * Apply sideLength on <mark>.shape</mark> buffer and calculate bounding
+     *
+     * @protected
+     */
+    bindBuffer(propArguments) {
+        const sideLength = this.getRepetitionSideLength(propArguments);
+        const shapeBuffer = this.applyModifiers(Float32Array.from(typeof this.shape === 'function' ? this.shape(propArguments) : this.shape), propArguments);
+        const tmpBounding = [undefined, undefined, undefined, undefined];
+        for (let i = 0, len = shapeBuffer.length; i < len; i += 2) {
+            shapeBuffer[i] = shapeBuffer[i] * sideLength[0];
+            shapeBuffer[i + 1] = shapeBuffer[i + 1] * sideLength[1];
+            Adapt_1.Bounding.add(tmpBounding, shapeBuffer[i], shapeBuffer[i + 1]);
+        }
+        Adapt_1.Bounding.bind(this.currentGenerationPrimitiveBounding, tmpBounding);
+        this.shapeBuffer = shapeBuffer;
     }
     /**
      * Return length of buffer
      *
-     * @param {PropArguments} propArguments
+     * @param {IPropArguments} propArguments
      * @returns {number}
      */
-    getBufferLength(propArguments) {
-        if (this.bStatic && this.buffer && this.buffer.length > 0)
+    getBufferLength( /*propArguments?: IPropArguments*/) {
+        if (this.buffer && this.buffer.length > 0)
             return this.buffer.length;
-        const childBufferLength = this.shape ? this.shape.getBufferLength(propArguments) : 0;
-        return childBufferLength * this.getRepetitionCount();
+        return this.shape.length * this.getRepetitionCount();
     }
     /**
      * Return a buffer of children shape or loop generated buffer
@@ -18638,120 +18778,60 @@ class Shape extends ShapeBase_1.ShapeBase {
      * @returns {Float32Array}
      */
     generateBuffer(generateId, propArguments) {
-        if (this.shape) {
-            if (this.shapeUseParent || this.shape.generateId !== generateId) {
-                if (this.shapeUseParent) {
-                    this.shape.clearBuffer(true, false);
-                }
-                this.shape.generate(generateId, false, propArguments);
-            }
-            return this.shape.getBuffer();
+        if (typeof this.shapeBuffer === 'undefined' ||
+            typeof this.props.sideLength === 'function' ||
+            typeof this.shape === 'function') {
+            this.bindBuffer(propArguments);
         }
-        return Shape.EMPTY_BUFFER;
-    }
-    /**
-     * Return bounding
-     *
-     * @param {boolean} bDirectSceneChild
-     * @returns {IShapeBounding}
-     */
-    getShapeBounding() {
-        if (this.shape) {
-            return this.shape.getBounding();
-        }
-        return this.bounding; // empty bounding defined in ShapeBase
-    }
-    /**
-     * Add to indexed buffer
-     *
-     * @protected
-     * @param {number} frameLength
-     * @param {IRepetition} repetition
-     * @returns {number} nextIndex
-     */
-    addIndex(frameLength, repetition, singleRepetitionBounding) {
-        if (this.shape) {
-            const childIndexedBuffer = this.shape.getIndexedBuffer() || [];
-            const parentBufferIndex = {
-                shape: this,
-                frameLength,
-                singleRepetitionBounding,
-                repetition: {
-                    type: repetition.type,
-                    angle: repetition.angle,
-                    index: repetition.index,
-                    count: repetition.count,
-                    offset: repetition.offset,
-                    row: {
-                        index: repetition.row.index,
-                        count: repetition.row.count,
-                        offset: repetition.row.offset,
-                    },
-                    col: {
-                        index: repetition.col.index,
-                        count: repetition.col.count,
-                        offset: repetition.col.offset,
-                    },
-                },
-            };
-            for (let i = 0, len = childIndexedBuffer.length; i < len; i++) {
-                const currentIndexed = { ...childIndexedBuffer[i] };
-                const parent = currentIndexed.parent
-                    ? Shape.setIndexedParent(currentIndexed.parent, parentBufferIndex)
-                    : parentBufferIndex;
-                this.indexedBuffer.push({ ...currentIndexed, parent });
-            }
-        }
-    }
-    /**
-     * Set parent of indexed
-     *
-     * @static
-     * @param {(IBufferIndex )} current
-     * @param {IBufferIndex} parent
-     * @returns {(IBufferIndex )}
-     */
-    static setIndexedParent(current, parent) {
-        const index = {
-            ...current,
-        };
-        index.parent = current.parent ? Shape.setIndexedParent(current.parent, parent) : parent;
-        return index;
+        return this.shapeBuffer;
     }
     /**
      * Set shape
      *
-     * @param {(SceneChild | undefined)} [shape]
+     * @param {(Float32Array)} [shape]
      */
     setShape(shape) {
-        if (typeof shape === 'undefined') {
-            this.shape = undefined;
-            this.clearBuffer(true, true);
-        }
-        else {
-            this.scene && Scene_1.Scene.propagateToChilden(shape, this.scene);
-            this.shape = shape;
-            this.shape.clearBuffer(true, true);
-        }
+        this.shape = Adapt_1.Adapt.adapt(shape, this.adaptMode);
+        this.clearBuffer(true);
+    }
+    /**
+     * Return adaptMode
+     *
+     * @returns {EAdaptMode}
+     * @memberof ShapeBase
+     */
+    getAdaptMode() {
+        return this.adaptMode;
+    }
+    /**
+     * Get static buffer
+     *
+     * @param sideLength
+     * @returns
+     */
+    static getBuffer(props = {}) {
+        const shape = new this({ ...props, sideLength: props.sideLength || 1 });
+        shape.generate();
+        return shape.getBuffer() || new Float32Array();
     }
 }
-exports.Shape = Shape;
-//# sourceMappingURL=Shape.js.map
+exports.ShapeBuffer = ShapeBuffer;
+//# sourceMappingURL=ShapeBuffer.js.map
 
 /***/ }),
-/* 33 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_316511__) => {
+/* 41 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ShapePrimitive = void 0;
-const glme = __nested_webpack_require_316511__(25);
-const ShapeBase_1 = __nested_webpack_require_316511__(24);
-const Modifier_1 = __nested_webpack_require_316511__(29);
-const Adapt_1 = __nested_webpack_require_316511__(28);
+const glme = __webpack_require__(33);
+const ShapeBase_1 = __webpack_require__(12);
+const Modifier_1 = __webpack_require__(37);
+const Adapt_1 = __webpack_require__(36);
 /**
- * @category Core.Abstract
+ * @category Scene
  */
 class ShapePrimitive extends ShapeBase_1.ShapeBase {
     /**
@@ -18891,2044 +18971,7 @@ exports.ShapePrimitive = ShapePrimitive;
 //# sourceMappingURL=ShapePrimitive.js.map
 
 /***/ }),
-/* 34 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_321166__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ShapeLoop = void 0;
-const math_1 = __nested_webpack_require_321166__(27);
-const Adapt_1 = __nested_webpack_require_321166__(28);
-const ShapePrimitive_1 = __nested_webpack_require_321166__(33);
-const ShapeBase_1 = __nested_webpack_require_321166__(24);
-/**
- * Shape Loop
- *
- * @category Core.Shapes
- * @public
- * @class ShapeLoop
- * @extends {ShapePrimitive}
- */
-class ShapeLoop extends ShapePrimitive_1.ShapePrimitive {
-    /**
-     * Creates an instance of ShapeLoop.
-     *
-     * @param {IShapeLoopSettings} [settings={}]
-     * @param {boolean} [bPreventGeneration=false]
-     */
-    constructor(settings = {}, bPreventGeneration = false) {
-        settings.type = settings.type || 'ShapeLoop';
-        super(settings);
-        this.loopDependencies = (settings.loopDependencies || []).concat('sideLength');
-        this.props.loop = settings.loop;
-        if (!bPreventGeneration) {
-            this.loop = {
-                start: 0,
-                end: math_1.PI2,
-                inc: math_1.PI2 / 10,
-                vertex: () => [0, 0],
-            };
-            this.bStaticLoop = this.isStaticLoop();
-            this.bStatic = this.isStatic();
-            this.bStaticIndexed = this.isStaticIndexed();
-        }
-    }
-    /**
-     * Check if currentOrSingleLoopBuffer is static
-     *
-     * @returns {boolean}
-     */
-    isStaticLoop() {
-        if (this.loopDependencies.includes('propArguments'))
-            return false;
-        for (let i = 0, len = this.loopDependencies.length; i < len; i++)
-            if (typeof this.props[this.loopDependencies[i]] === 'function')
-                return false;
-        return true;
-    }
-    /**
-     * Check if shape is static
-     *
-     * @returns {boolean}
-     */
-    isStatic() {
-        return this.bStaticLoop && super.isStatic();
-    }
-    /**
-     * Check if shape has static indexed
-     * The number of vertices is defined by number of loop iteration
-     *
-     * @returns {boolean}
-     */
-    isStaticIndexed() {
-        // return this.bStaticLoop && super.isStaticIndexed()
-        return (super.isStaticIndexed() &&
-            (typeof this.props.loop !== 'undefined'
-                ? typeof this.props.loop.start !== 'function' &&
-                    typeof this.props.loop.end !== 'function' &&
-                    typeof this.props.loop.inc !== 'function'
-                : true));
-    }
-    /**
-     *  Unset buffer
-     *
-     * @param {boolean} [bClearIndexed=false]
-     * @param {boolean} [bPropagateToParents=false]
-     */
-    clearBuffer(bClearIndexed = false, bPropagateToParents = true) {
-        this.bStaticLoop = this.isStaticLoop();
-        if (bClearIndexed) {
-            this.currentOrSingleLoopBuffer = undefined;
-        }
-        super.clearBuffer(bClearIndexed, bPropagateToParents);
-    }
-    /**
-     * Set single or multiple props
-     *
-     * @param {(Props)} key
-     * @param {*} [value]
-     * @param {boolean} [bClearIndexed=false]
-     */
-    setProp(key, value) {
-        let bClearIndexed = false;
-        const keys = (typeof key === 'string' ? { [key]: value } : key);
-        for (let i = this.loopDependencies.length - 1; i >= 0; i--) {
-            if (this.loopDependencies[i] in keys) {
-                // this.props.loop = undefined
-                bClearIndexed = true;
-                break;
-            }
-        }
-        if ('loop' in keys) {
-            keys.loop = { ...this.props.loop, ...keys.loop };
-            bClearIndexed = true;
-        }
-        super.setProp(keys, value, bClearIndexed);
-    }
-    /**
-     * Return length of buffer
-     *
-     * @param {PropArguments} [propArguments]
-     * @returns {number}
-     */
-    getBufferLength(propArguments) {
-        if (this.bStatic && typeof this.buffer !== 'undefined')
-            return this.buffer.length;
-        if (this.bStaticLoop && typeof this.currentOrSingleLoopBuffer !== 'undefined')
-            return this.currentOrSingleLoopBuffer.length * this.getRepetitionCount();
-        const { count } = this.getLoop(propArguments || ShapeBase_1.ShapeBase.getEmptyPropArguments(this));
-        return this.getRepetitionCount() * count * 2;
-    }
-    /**
-     * Return a buffer of children shape or loop generated buffer
-     *
-     * @protected
-     * @param {number} generateId
-     * @param {PropArguments} propArguments
-     * @returns {Float32Array}
-     */
-    generateBuffer(generateId, propArguments) {
-        if (!this.bStaticLoop)
-            return this.generateLoopBuffer(propArguments);
-        if (typeof this.props.sideLength === 'function' || typeof this.currentOrSingleLoopBuffer === 'undefined')
-            this.currentOrSingleLoopBuffer = this.generateLoopBuffer(propArguments);
-        return this.currentOrSingleLoopBuffer;
-    }
-    /**
-     * Generate loop buffer
-     *
-     * @protected
-     * @param {PropArguments} propArguments
-     * @returns {Float32Array}
-     */
-    generateLoopBuffer(propArguments) {
-        const { start, inc, /*end,*/ count } = this.getLoop(propArguments);
-        const sideLength = this.getRepetitionSideLength(propArguments);
-        const getVertex = (this.props.loop && this.props.loop.vertex ? this.props.loop.vertex : this.loop.vertex);
-        const shapeLoop = {
-            index: 0,
-            offset: 0,
-            current: 0,
-            count: count,
-        };
-        const vertexLength = shapeLoop.count;
-        const bufferLength = vertexLength * 2;
-        const currentOrSingleLoopBuffer = new Float32Array(bufferLength);
-        for (let i = 0, j = 0; i < vertexLength; i++, j += 2) {
-            const current = start + inc * i;
-            const offset = shapeLoop.count > 1 ? i / (shapeLoop.count - 1) : 1;
-            // const angle = (end - start) * offset + start
-            shapeLoop.current = current;
-            shapeLoop.index = i + 1;
-            shapeLoop.offset = offset;
-            const vertex = getVertex(shapeLoop, propArguments);
-            currentOrSingleLoopBuffer[j] = vertex[0];
-            currentOrSingleLoopBuffer[j + 1] = vertex[1];
-            // currentOrSingleLoopBuffer[j] *= sideLength[0]
-            // currentOrSingleLoopBuffer[j + 1] *= sideLength[1]
-            // Bounding.add(tmpBounding, currentOrSingleLoopBuffer[j], currentOrSingleLoopBuffer[j + 1])
-        }
-        const tmpBounding = [undefined, undefined, undefined, undefined];
-        const buffer = this.applyModifiers(currentOrSingleLoopBuffer, propArguments);
-        for (let i = 0, len = buffer.length; i < len; i += 2) {
-            buffer[i] = buffer[i] * sideLength[0];
-            buffer[i + 1] = buffer[i + 1] * sideLength[1];
-            Adapt_1.Bounding.add(tmpBounding, buffer[i], buffer[i + 1]);
-        }
-        Adapt_1.Bounding.bind(this.currentGenerationPrimitiveBounding, tmpBounding);
-        return buffer;
-    }
-    /**
-     * Return information about a client loop gnerator
-     *
-     * @public
-     * @param {PropArguments} propArguments
-     * @returns {ShapeLoopInformation}
-     */
-    getLoop(propArguments) {
-        var _a, _b, _c, _d, _e, _f;
-        let start = (_b = (_a = this.props.loop) === null || _a === void 0 ? void 0 : _a.start) !== null && _b !== void 0 ? _b : this.loop.start;
-        let end = (_d = (_c = this.props.loop) === null || _c === void 0 ? void 0 : _c.end) !== null && _d !== void 0 ? _d : this.loop.end;
-        let inc = (_f = (_e = this.props.loop) === null || _e === void 0 ? void 0 : _e.inc) !== null && _f !== void 0 ? _f : this.loop.inc;
-        start = (typeof start === 'function' ? start(propArguments) : start);
-        end = (typeof end === 'function' ? end(propArguments) : end);
-        inc = (typeof inc === 'function' ? inc(propArguments) : inc);
-        const count = Math.ceil((end - start) / inc);
-        return { start, end, inc, count: count <= 0 ? 0 : count };
-    }
-    /**
-     * Set shape from loop generator
-     *
-     * @param {(IShapeLoopGenerator)} [shape]
-     */
-    setShape(loop) {
-        this.setProp('loop', loop);
-    }
-    /**
-     * Get static buffer
-     *
-     * @param sideLength
-     * @returns
-     */
-    static getBuffer(props) {
-        const shape = new this({ ...props, sideLength: props.sideLength || 1 });
-        shape.generate();
-        return shape.getBuffer() || new Float32Array();
-    }
-}
-exports.ShapeLoop = ShapeLoop;
-ShapeLoop.PId2 = Math.PI / 2;
-//# sourceMappingURL=ShapeLoop.js.map
-
-/***/ }),
-/* 35 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_329665__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ShapeBuffer = void 0;
-const Adapt_1 = __nested_webpack_require_329665__(28);
-const ShapePrimitive_1 = __nested_webpack_require_329665__(33);
-/**
- * @category Core.Shapes
- */
-class ShapeBuffer extends ShapePrimitive_1.ShapePrimitive {
-    /**
-     * Creates an instance of ShapeBuffer.
-     *
-     * @param {IShapeBufferSettings} [settings={}]
-     */
-    constructor(settings = {}) {
-        var _a, _b;
-        settings.type = settings.type || 'ShapeBuffer';
-        settings.adaptMode = (_a = settings.adaptMode) !== null && _a !== void 0 ? _a : Adapt_1.EAdaptMode.Scale;
-        super(settings);
-        this.adaptMode = (_b = settings.adaptMode) !== null && _b !== void 0 ? _b : Adapt_1.EAdaptMode.Fill;
-        if (typeof settings.shape === 'undefined') {
-            console.warn('[Urpflanze:ShapeBuffer] ShapeBuffer require a buffer passed from `shape` property');
-            this.shape = ShapeBuffer.EMPTY_BUFFER;
-        }
-        else {
-            this.shape = typeof settings.shape !== 'function' ? Adapt_1.Adapt.adapt(settings.shape, this.adaptMode) : settings.shape;
-        }
-        this.bStatic = this.isStatic();
-        this.bStaticIndexed = this.isStaticIndexed();
-    }
-    /**
-     * Check shape is static
-     *
-     * @returns boolean
-     */
-    isStatic() {
-        return typeof this.shape !== 'function' && super.isStatic();
-    }
-    /**
-     * Check shape is static indexed
-     *
-     * @returns boolean
-     */
-    isStaticIndexed() {
-        return typeof this.shape !== 'function' && super.isStaticIndexed();
-    }
-    /**
-     *  Unset buffer
-     *
-     * @param {boolean} [bClearIndexed=false]
-     * @param {boolean} [bPropagateToParents=false]
-     */
-    clearBuffer(bClearIndexed = false, bPropagateToParents = true) {
-        super.clearBuffer(bClearIndexed, bPropagateToParents);
-        this.shapeBuffer = undefined;
-    }
-    /**
-     * Apply sideLength on <mark>.shape</mark> buffer and calculate bounding
-     *
-     * @protected
-     */
-    bindBuffer(propArguments) {
-        const sideLength = this.getRepetitionSideLength(propArguments);
-        const shapeBuffer = this.applyModifiers(Float32Array.from(typeof this.shape === 'function' ? this.shape(propArguments) : this.shape), propArguments);
-        const tmpBounding = [undefined, undefined, undefined, undefined];
-        for (let i = 0, len = shapeBuffer.length; i < len; i += 2) {
-            shapeBuffer[i] = shapeBuffer[i] * sideLength[0];
-            shapeBuffer[i + 1] = shapeBuffer[i + 1] * sideLength[1];
-            Adapt_1.Bounding.add(tmpBounding, shapeBuffer[i], shapeBuffer[i + 1]);
-        }
-        Adapt_1.Bounding.bind(this.currentGenerationPrimitiveBounding, tmpBounding);
-        this.shapeBuffer = shapeBuffer;
-    }
-    /**
-     * Return length of buffer
-     *
-     * @param {IPropArguments} propArguments
-     * @returns {number}
-     */
-    getBufferLength( /*propArguments?: IPropArguments*/) {
-        if (this.buffer && this.buffer.length > 0)
-            return this.buffer.length;
-        return this.shape.length * this.getRepetitionCount();
-    }
-    /**
-     * Return a buffer of children shape or loop generated buffer
-     *
-     * @protected
-     * @param {number} generateId
-     * @param {PropArguments} propArguments
-     * @returns {Float32Array}
-     */
-    generateBuffer(generateId, propArguments) {
-        if (typeof this.shapeBuffer === 'undefined' ||
-            typeof this.props.sideLength === 'function' ||
-            typeof this.shape === 'function') {
-            this.bindBuffer(propArguments);
-        }
-        return this.shapeBuffer;
-    }
-    /**
-     * Set shape
-     *
-     * @param {(Float32Array)} [shape]
-     */
-    setShape(shape) {
-        this.shape = Adapt_1.Adapt.adapt(shape, this.adaptMode);
-        this.clearBuffer(true);
-    }
-    /**
-     * Return adaptMode
-     *
-     * @returns {EAdaptMode}
-     * @memberof ShapeBase
-     */
-    getAdaptMode() {
-        return this.adaptMode;
-    }
-    /**
-     * Get static buffer
-     *
-     * @param sideLength
-     * @returns
-     */
-    static getBuffer(props = {}) {
-        const shape = new this({ ...props, sideLength: props.sideLength || 1 });
-        shape.generate();
-        return shape.getBuffer() || new Float32Array();
-    }
-}
-exports.ShapeBuffer = ShapeBuffer;
-//# sourceMappingURL=ShapeBuffer.js.map
-
-/***/ }),
-/* 36 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_334154__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ShapeRecursive = void 0;
-const Shape_1 = __nested_webpack_require_334154__(32);
-/**
- * @category Core.Shapes
- */
-class ShapeRecursive extends Shape_1.Shape {
-    /**
-     * Creates an instance of ShapeRecursive.
-     *
-     * @param {IShapeRecursiveSettings} [settings={}]
-     */
-    constructor(settings) {
-        settings.type = settings.type || 'ShapeRecursive';
-        super(settings);
-        this.props.recursions = settings.recursions || 1;
-        this.props.recursionScale = settings.recursionScale || 2;
-        this.props.recursionVertex = settings.recursionVertex || 0;
-        // this.bInner = settings.bInner ?? false
-        this.bStatic = this.isStatic();
-        this.bStaticIndexed = this.isStaticIndexed();
-        this.shapeUseRecursion = !!settings.shapeUseRecursion;
-        // this.currentGenerationRecursiveBounding = Bounding.empty()
-    }
-    /**
-     *  Unset buffer
-     *
-     * @param {boolean} [bClearIndexed=false]
-     * @param {boolean} [bPropagateToParents=false]
-     * @param {boolean} [bPropagateToChildren=false]
-     */
-    clearBuffer(bClearIndexed = false, bPropagateToParents = true) {
-        if (bClearIndexed) {
-            this.shapeRecursiveBuffer = undefined;
-        }
-        super.clearBuffer(bClearIndexed, bPropagateToParents);
-    }
-    /**
-     * Set type of recursion
-     *
-     * @param {boolean} inner
-     */
-    // public setRecursionnInner(inner: boolean): void {
-    // 	this.bInner = inner
-    // 	this.clearBuffer(true)
-    // }
-    /**
-     *
-     * @returns {boolean}
-     */
-    isStatic() {
-        return (typeof this.props.recursions !== 'function' &&
-            typeof this.props.recursionScale !== 'function' &&
-            typeof this.props.recursionVertex !== 'function' &&
-            super.isStatic());
-    }
-    /**
-     *
-     * @returns {boolean}
-     */
-    isStaticIndexed() {
-        return (typeof this.props.recursions !== 'function' &&
-            typeof this.props.recursionVertex !== 'function' &&
-            super.isStaticIndexed());
-    }
-    /**
-     * Return a buffer of children shape with recursion
-     *
-     * @protected
-     * @param {number} generateId
-     * @param {PropArguments} propArguments
-     * @returns {Float32Array}
-     */
-    generateBuffer(generateId, propArguments) {
-        if (this.shape) {
-            if (typeof this.shapeRecursiveBuffer === 'undefined' ||
-                this.shapeUseParent ||
-                this.shape.generateId !== generateId) {
-                this.bindBuffer(generateId, propArguments);
-            }
-            return this.shapeRecursiveBuffer;
-        }
-        return Shape_1.Shape.EMPTY_BUFFER;
-    }
-    /**
-     * Generate Recoursive shape buffer
-     *
-     * @protected
-     * @param {number} generateId
-     * @param {PropArguments} propArguments
-     */
-    bindBuffer(generateId, propArguments) {
-        const recursions = Math.floor(this.getProp('recursions', propArguments, 1));
-        const recursionVertex = Math.floor(this.getProp('recursionVertex', propArguments, 0));
-        const recursionScale = this.getProp('recursionScale', propArguments, 2);
-        const childShape = this.shape;
-        let currentRecursionRepetition = {
-            index: 1,
-            offset: 1,
-            count: 1,
-            level: { index: 1, offset: recursions > 1 ? 0 : 1, count: 1 },
-        };
-        const recursionPropArguments = {
-            ...propArguments,
-            recursion: currentRecursionRepetition,
-        };
-        childShape.generate(generateId, false, recursionPropArguments);
-        const firstGenerationChildBuffer = childShape.getBuffer();
-        if (recursions <= 1) {
-            // this.currentGenerationRecursiveBounding = this.shape.getBounding()
-            this.shapeRecursiveBuffer = firstGenerationChildBuffer;
-            return;
-        }
-        let shapeBuffer = firstGenerationChildBuffer;
-        const storedRecursion = [currentRecursionRepetition];
-        let paretRecursionIndex = 0, added = 1;
-        // const tmpBounding = [undefined, undefined, undefined, undefined]
-        const singleShapeBufferLength = shapeBuffer.length;
-        const realVertexCount = singleShapeBufferLength / 2;
-        const singleShapeVertexCount = recursionVertex <= 0 ? realVertexCount : Math.min(recursionVertex, realVertexCount);
-        const recursionOffsetMultiplier = recursionVertex === 0 ? 1 : realVertexCount / Math.min(recursionVertex, realVertexCount);
-        const recusiveShapeBuffer = new Float32Array(ShapeRecursive.summmation(recursions, singleShapeVertexCount) * singleShapeBufferLength);
-        for (let i = 0; i < singleShapeBufferLength; i += 2) {
-            recusiveShapeBuffer[i] = shapeBuffer[i];
-            recusiveShapeBuffer[i + 1] = shapeBuffer[i + 1];
-            // Bounding.add(tmpBounding, recusiveShapeBuffer[i], recusiveShapeBuffer[i + 1])
-        }
-        for (let currentRecursion = 1; currentRecursion < recursions; currentRecursion++) {
-            const level_offset = recursions > 1 ? currentRecursion / (recursions - 1) : 1;
-            const currentRecursionVertexCount = ShapeRecursive.summmation(currentRecursion, singleShapeVertexCount);
-            const recursionBufferStartIndex = currentRecursionVertexCount * singleShapeBufferLength;
-            const parentRecursion = currentRecursion - 1;
-            const parentRecursionBufferStartIndex = parentRecursion === 0
-                ? 0
-                : ShapeRecursive.summmation(parentRecursion, singleShapeVertexCount) * singleShapeBufferLength;
-            for (let currentShapeRecursionRepetition = 0, totalRecursionRepetitions = singleShapeVertexCount ** currentRecursion; currentShapeRecursionRepetition < totalRecursionRepetitions; currentShapeRecursionRepetition++, added++) {
-                currentRecursionRepetition = {
-                    index: currentShapeRecursionRepetition + 1,
-                    offset: totalRecursionRepetitions > 1 ? currentShapeRecursionRepetition / (totalRecursionRepetitions - 1) : 1,
-                    count: totalRecursionRepetitions,
-                    level: { index: currentRecursion + 1, offset: level_offset, count: recursions },
-                    parent: storedRecursion[paretRecursionIndex],
-                };
-                storedRecursion.push(currentRecursionRepetition);
-                if (this.shapeUseRecursion) {
-                    recursionPropArguments.recursion = currentRecursionRepetition;
-                    childShape.generate(generateId, false, recursionPropArguments);
-                    shapeBuffer = childShape.getBuffer();
-                }
-                const shapeVertexBufferIndex = recursionBufferStartIndex + currentShapeRecursionRepetition * singleShapeBufferLength;
-                // const centerVertexIndex = parentRecursionBufferStartIndex + currentShapeRecursionRepetition * 2
-                const centerVertexIndex = Math.floor(parentRecursionBufferStartIndex + currentShapeRecursionRepetition * 2 * recursionOffsetMultiplier);
-                const centerX = recusiveShapeBuffer[centerVertexIndex];
-                const centerY = recusiveShapeBuffer[centerVertexIndex + 1];
-                const currentRecursionScale = recursionScale ** currentRecursion;
-                for (let i = 0, len = singleShapeBufferLength; i < len; i += 2) {
-                    // if (this.bInner) {
-                    // 	const parentCurrentVertex =
-                    // 		parentRecursionBufferStartIndex +
-                    // 		Math.floor(currentShapeRecursionRepetition / singleShapeVertexCount) *
-                    // 			singleShapeVertexCount *
-                    // 			recursionOffsetMultiplier *
-                    // 			2
-                    // 	const parentX = recusiveShapeBuffer[parentCurrentVertex + i]
-                    // 	const parentY = recusiveShapeBuffer[parentCurrentVertex + i + 1]
-                    // 	recusiveShapeBuffer[shapeVertexBufferIndex + i] = (centerX - parentX) / recursionScale + parentX
-                    // 	recusiveShapeBuffer[shapeVertexBufferIndex + i + 1] = (centerY - parentY) / recursionScale + parentY
-                    // const parentX = shapeBuffer[i] / recursionScale ** currentRecursion
-                    // const parentY = shapeBuffer[i + 1] / recursionScale ** currentRecursion
-                    // recusiveShapeBuffer[shapeVertexBufferIndex + i] = (centerX - parentX) / recursionScale + parentX
-                    // recusiveShapeBuffer[shapeVertexBufferIndex + i + 1] = (centerY - parentY) / recursionScale + parentY
-                    // } else {
-                    const parentXScaled = shapeBuffer[i] / currentRecursionScale;
-                    const parentYScaled = shapeBuffer[i + 1] / currentRecursionScale;
-                    recusiveShapeBuffer[shapeVertexBufferIndex + i] = centerX + parentXScaled;
-                    recusiveShapeBuffer[shapeVertexBufferIndex + i + 1] = centerY + parentYScaled;
-                    // }
-                    // Bounding.add(
-                    // 	tmpBounding,
-                    // 	recusiveShapeBuffer[shapeVertexBufferIndex + i],
-                    // 	recusiveShapeBuffer[shapeVertexBufferIndex + i + 1]
-                    // )
-                }
-                if (added % singleShapeVertexCount === 0) {
-                    paretRecursionIndex += 1;
-                }
-            }
-        }
-        // Bounding.bind(this.currentGenerationRecursiveBounding, tmpBounding)
-        this.shapeRecursiveBuffer = recusiveShapeBuffer;
-    }
-    /**
-     * Add this to indexedBuffer
-     *
-     * @protected
-     * @param {number} frameLength
-     * @param {IRepetition} repetition
-     * @returns {number} nextIndex
-     */
-    addIndex(frameLength, repetition, singleRepetitionBounding) {
-        if (this.shape) {
-            const propArguments = { repetition, shape: this };
-            const recursions = Math.floor(this.getProp('recursions', propArguments, 1));
-            const recursionVertex = Math.floor(this.getProp('recursionVertex', propArguments, 0));
-            // const realFrameLength = ShapeRecursive.summmation(recursions, this.shape.getBufferLength() / 2)
-            const bufferIndex = {
-                shape: this,
-                frameLength: frameLength,
-                singleRepetitionBounding,
-                repetition: {
-                    type: repetition.type,
-                    angle: repetition.angle,
-                    index: repetition.index,
-                    count: repetition.count,
-                    offset: repetition.offset,
-                    row: {
-                        index: repetition.row.index,
-                        count: repetition.row.count,
-                        offset: repetition.row.offset,
-                    },
-                    col: {
-                        index: repetition.col.index,
-                        count: repetition.col.count,
-                        offset: repetition.col.offset,
-                    },
-                },
-                recursion: {
-                    index: 1,
-                    offset: 1,
-                    count: 1,
-                    level: { index: 1, offset: recursions > 1 ? 0 : 1, count: recursions },
-                },
-            };
-            const childIndexedBuffer = this.shape.getIndexedBuffer() || [];
-            for (let childIndexed = 0, childIndexedLen = childIndexedBuffer.length; childIndexed < childIndexedLen; childIndexed++) {
-                const currentIndexed = { ...childIndexedBuffer[childIndexed] };
-                const currentRecursionRepetition = {
-                    index: 1,
-                    offset: 1,
-                    count: 1,
-                    level: { index: 1, offset: recursions > 1 ? 0 : 1, count: recursions },
-                };
-                const recursionBufferIndex = {
-                    ...bufferIndex,
-                    recursion: currentRecursionRepetition,
-                };
-                const parent = (currentIndexed.parent
-                    ? Shape_1.Shape.setIndexedParent(currentIndexed.parent, recursionBufferIndex)
-                    : recursionBufferIndex);
-                this.indexedBuffer.push({
-                    ...currentIndexed,
-                    parent,
-                });
-            }
-            if (recursions > 1) {
-                const realVertexCount = this.shape.getBufferLength({ ...propArguments, parent: { ...bufferIndex } }) / 2;
-                const vertexCount = recursionVertex <= 0 ? realVertexCount : Math.min(recursionVertex, realVertexCount);
-                const storedRecursion = this.indexedBuffer.map(indexed => [indexed.parent.recursion]);
-                let paretRecursionIndex = 0, added = 1;
-                for (let i = 1; i < recursions; i++) {
-                    const level_offset = recursions > 1 ? i / (recursions - 1) : 1;
-                    for (let j = 0, len = vertexCount ** i; j < len; j++, added++) {
-                        const recursionOffset = len > 1 ? j / (len - 1) : 1;
-                        for (let childIndexed = 0, childIndexedLen = childIndexedBuffer.length; childIndexed < childIndexedLen; childIndexed++) {
-                            const currentIndexed = { ...childIndexedBuffer[childIndexed] };
-                            const currentRecursionRepetition = {
-                                index: j + 1,
-                                offset: recursionOffset,
-                                count: len,
-                                level: { index: i + 1, offset: level_offset, count: recursions },
-                                parent: storedRecursion[childIndexed][paretRecursionIndex],
-                            };
-                            const recursionBufferIndex = { ...bufferIndex, recursion: currentRecursionRepetition };
-                            const parent = currentIndexed.parent
-                                ? Shape_1.Shape.setIndexedParent(currentIndexed.parent, recursionBufferIndex)
-                                : recursionBufferIndex;
-                            this.indexedBuffer.push({ ...currentIndexed, parent });
-                            storedRecursion[childIndexed].push(currentRecursionRepetition);
-                            if (added % vertexCount === 0) {
-                                paretRecursionIndex += 1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    /**
-     * Retturn summation value
-     *
-     * @static
-     * @param {number} recursion
-     * @param {number} vertexCount
-     * @returns {number}
-     */
-    static summmation(recursion, vertexCount) {
-        if (recursion === 1)
-            return 1;
-        let result = 1;
-        for (let i = 1; i < recursion; i++)
-            result += vertexCount ** i;
-        return result;
-    }
-    /**
-     * Empty recursion repetition
-     *
-     * @static
-     * @return {*}  {IRecursionRepetition}
-     */
-    static getEmptyRecursion() {
-        return {
-            index: 1,
-            offset: 1,
-            count: 1,
-            level: { index: 1, offset: 1, count: 1 },
-        };
-    }
-}
-exports.ShapeRecursive = ShapeRecursive;
-//# sourceMappingURL=ShapeRecursive.js.map
-
-/***/ }),
-/* 37 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_349591__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ShapeFollow = void 0;
-const Shape_1 = __nested_webpack_require_349591__(32);
-/**
- * @category Core.Shapes
- */
-class ShapeFollow extends Shape_1.Shape {
-    /**
-     * Creates an instance of ShapeFollow.
-     *
-     * @param {IShapeFollowSettings} [settings={}]
-     */
-    constructor(settings) {
-        settings.type = settings.type || 'ShapeFollow';
-        super(settings);
-        this.follow = settings.follow || settings.shape;
-        this.bStatic = this.isStatic();
-        this.bStaticIndexed = this.isStaticIndexed();
-        this.shapeUseFollow = !!settings.shapeUseFollow;
-        // this.currentGenerationRecursiveBounding = Bounding.empty()
-    }
-    /**
-     *  Unset buffer
-     *
-     * @param {boolean} [bClearIndexed=false]
-     * @param {boolean} [bPropagateToParents=false]
-     * @param {boolean} [bPropagateToChildren=false]
-     */
-    clearBuffer(bClearIndexed = false, bPropagateToParents = true) {
-        if (bClearIndexed) {
-            this.shapeFollowBuffer = undefined;
-        }
-        super.clearBuffer(bClearIndexed, bPropagateToParents);
-    }
-    /**
-     *
-     * @returns {boolean}
-     */
-    isStatic() {
-        return (this.follow ? this.follow.isStatic() : true) && super.isStatic();
-    }
-    /**
-     *
-     * @returns {boolean}
-     */
-    isStaticIndexed() {
-        return (this.follow ? this.follow.isStaticIndexed() : true) && super.isStaticIndexed();
-    }
-    /**
-     * Return a buffer of children shape with recursion
-     *
-     * @protected
-     * @param {number} generateId
-     * @param {PropArguments} propArguments
-     * @returns {Float32Array}
-     */
-    generateBuffer(generateId, propArguments) {
-        if (this.shape && this.follow) {
-            if (typeof this.shapeFollowBuffer === 'undefined' ||
-                this.shapeUseParent ||
-                this.shape.generateId !== generateId ||
-                this.follow.generateId !== generateId) {
-                this.bindBuffer(generateId, propArguments);
-            }
-            return this.shapeFollowBuffer;
-        }
-        return Shape_1.Shape.EMPTY_BUFFER;
-    }
-    /**
-     * Generate Recoursive shape buffer
-     *
-     * @protected
-     * @param {number} generateId
-     * @param {PropArguments} propArguments
-     */
-    bindBuffer(generateId, propArguments) {
-        const followShape = this.follow;
-        followShape.generate(generateId, false, propArguments);
-        const followBuffer = followShape.getBuffer();
-        // const followIndexed = followShape.getIndexedBuffer() as Array<IBufferIndex>
-        const followPropArguments = {
-            ...propArguments,
-            follow: {
-                index: 1,
-                offset: 1,
-                count: 1,
-            },
-            // follow_repetition: followIndexed[0].repetition,
-        };
-        const childShape = this.shape;
-        childShape.generate(generateId, false, followPropArguments);
-        let shapeBuffer = childShape.getBuffer();
-        // const tmpBounding = [undefined, undefined, undefined, undefined]
-        const singleShapeBufferLength = shapeBuffer.length;
-        const followShapeBuffer = new Float32Array(singleShapeBufferLength * (followBuffer.length / 2));
-        const totalFollowVertexCount = followBuffer.length / 2;
-        for (let currentShapeFollowRepetition = 0; currentShapeFollowRepetition < totalFollowVertexCount; currentShapeFollowRepetition++) {
-            const currentFollowRepetition = {
-                index: currentShapeFollowRepetition + 1,
-                offset: totalFollowVertexCount > 1 ? currentShapeFollowRepetition / (totalFollowVertexCount - 1) : 1,
-                count: totalFollowVertexCount,
-            };
-            if (this.shapeUseFollow) {
-                followPropArguments.follow = currentFollowRepetition;
-                // followPropArguments.follow_repetition = followIndexed[currentShapeFollowRepetition].repetition
-                childShape.generate(generateId, false, followPropArguments);
-                shapeBuffer = childShape.getBuffer();
-            }
-            const shapeVertexBufferIndex = currentShapeFollowRepetition * singleShapeBufferLength;
-            // const centerVertexIndex = parentRecursionBufferStartIndex + currentShapeRecursionRepetition * 2
-            const centerVertexIndex = currentShapeFollowRepetition * 2;
-            const centerX = followBuffer[centerVertexIndex];
-            const centerY = followBuffer[centerVertexIndex + 1];
-            for (let i = 0, len = shapeBuffer.length; i < len; i += 2) {
-                followShapeBuffer[shapeVertexBufferIndex + i] = centerX + shapeBuffer[i];
-                followShapeBuffer[shapeVertexBufferIndex + i + 1] = centerY + shapeBuffer[i + 1];
-                // Bounding.add(
-                // 	tmpBounding,
-                // 	followShapeBuffer[shapeVertexBufferIndex + i],
-                // 	followShapeBuffer[shapeVertexBufferIndex + i + 1]
-                // )
-            }
-        }
-        // Bounding.bind(this.currentGenerationRecursiveBounding, tmpBounding)
-        this.shapeFollowBuffer = followShapeBuffer;
-    }
-    /**
-     * Add this to indexedBuffer
-     *
-     * @protected
-     * @param {number} frameLength
-     * @param {IRepetition} repetition
-     * @returns {number} nextIndex
-     */
-    addIndex(frameLength, repetition, singleRepetitionBounding) {
-        if (this.shape) {
-            const propArguments = { repetition, shape: this };
-            const bufferIndex = {
-                shape: this,
-                frameLength: frameLength,
-                singleRepetitionBounding,
-                repetition: {
-                    type: repetition.type,
-                    angle: repetition.angle,
-                    index: repetition.index,
-                    count: repetition.count,
-                    offset: repetition.offset,
-                    row: {
-                        index: repetition.row.index,
-                        count: repetition.row.count,
-                        offset: repetition.row.offset,
-                    },
-                    col: {
-                        index: repetition.col.index,
-                        count: repetition.col.count,
-                        offset: repetition.col.offset,
-                    },
-                },
-                follow: {
-                    index: 1,
-                    offset: 1,
-                    count: 1,
-                },
-            };
-            const childIndexedBuffer = this.shape.getIndexedBuffer() || [];
-            for (let childIndexed = 0, childIndexedLen = childIndexedBuffer.length; childIndexed < childIndexedLen; childIndexed++) {
-                const vertexCount = this.follow.getBuffer().length / 2; // this.follow.getBufferLength({ ...propArguments, parent: { ...bufferIndex } }) / 2
-                for (let j = 0, len = vertexCount; j < len; j++) {
-                    const followOffset = len > 1 ? j / (len - 1) : 1;
-                    for (let childIndexed = 0, childIndexedLen = childIndexedBuffer.length; childIndexed < childIndexedLen; childIndexed++) {
-                        const currentIndexed = { ...childIndexedBuffer[childIndexed] };
-                        const currentFollowRepetition = {
-                            index: j + 1,
-                            offset: followOffset,
-                            count: len,
-                        };
-                        const followBufferIndex = { ...bufferIndex, follow: currentFollowRepetition };
-                        const parent = currentIndexed.parent
-                            ? Shape_1.Shape.setIndexedParent(currentIndexed.parent, followBufferIndex)
-                            : followBufferIndex;
-                        this.indexedBuffer.push({ ...currentIndexed, parent });
-                    }
-                }
-            }
-        }
-    }
-    /**
-     * Retturn summation value
-     *
-     * @static
-     * @param {number} recursion
-     * @param {number} vertexCount
-     * @returns {number}
-     */
-    static summmation(recursion, vertexCount) {
-        if (recursion === 1)
-            return 1;
-        let result = 1;
-        for (let i = 1; i < recursion; i++)
-            result += vertexCount ** i;
-        return result;
-    }
-    /**
-     * Empty recursion repetition
-     *
-     * @static
-     * @return {*}  {IRecursionRepetition}
-     */
-    static getEmptyRecursion() {
-        return {
-            index: 1,
-            offset: 1,
-            count: 1,
-            level: { index: 1, offset: 1, count: 1 },
-        };
-    }
-}
-exports.ShapeFollow = ShapeFollow;
-//# sourceMappingURL=ShapeFollow.js.map
-
-/***/ }),
-/* 38 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_358395__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Line = void 0;
-const Adapt_1 = __nested_webpack_require_358395__(28);
-const ShapeBuffer_1 = __nested_webpack_require_358395__(35);
-/**
- *
- * @category Core.Primitives
- * @class Line
- * @extends {ShapeBuffer}
- */
-class Line extends ShapeBuffer_1.ShapeBuffer {
-    /**
-     * Two point, based on ShapeBuffer
-     *
-     * @param {ShapeBaseSettings} [settings={}]
-     * @memberof Line
-     */
-    constructor(settings = {}) {
-        settings.type = 'Line';
-        settings.shape = Line.buffer;
-        settings.adaptMode = Adapt_1.EAdaptMode.None;
-        settings.bClosed = false;
-        super(settings);
-    }
-    /**
-     * @link https://gist.github.com/pborissow/5c92b77a804688385c77749d1187ba07
-     */
-    static toPolygon(buffer, thickness) {
-        const solidified = [];
-        //Convert thickness into an array as needed
-        if (!Array.isArray(thickness)) {
-            const _thickness = thickness;
-            const points = buffer.length / 2;
-            thickness = new Array(points);
-            for (let i = 0; i < points; i++) {
-                thickness[i] = _thickness;
-            }
-        }
-        function getOffsets(ax, ay, bx, by, thickness) {
-            const dx = bx - ax, dy = by - ay, len = Math.sqrt(dx * dx + dy * dy), scale = thickness / (2 * len);
-            return [-scale * dy, scale * dx];
-        }
-        function getIntersection(a1, b1, a2, b2) {
-            // directional constants
-            const k1 = (b1[1] - a1[1]) / (b1[0] - a1[0]), k2 = (b2[1] - a2[1]) / (b2[0] - a2[0]);
-            // if the directional constants are equal, the lines are parallel
-            if (Math.abs(k1 - k2) < 0.00001) {
-                return;
-            }
-            // y offset constants for both lines
-            const m1 = a1[1] - k1 * a1[0];
-            const m2 = a2[1] - k2 * a2[0];
-            // compute x
-            const x = (m1 - m2) / (k2 - k1);
-            // use y = k * x + m to get y coordinate
-            const y = k1 * x + m1;
-            return [x, y];
-        }
-        let bFirst, bLast, prevA = [
-            [0, 0],
-            [0, 0],
-        ], prevB = [
-            [0, 0],
-            [0, 0],
-        ];
-        for (let i = 0, len = buffer.length - 2; i < len; i += 2) {
-            bFirst = i === 0;
-            bLast = i === len - 2;
-            const off = getOffsets(buffer[i], buffer[i + 1], buffer[i + 2], buffer[i + 3], thickness[i]);
-            const p0a = [buffer[i] + off[0], buffer[i + 1] + off[1]];
-            const p1a = [buffer[i + 2] + off[0], buffer[i + 3] + off[1]];
-            const p0b = [buffer[i] - off[0], buffer[i + 1] - off[1]];
-            const p1b = [buffer[i + 2] - off[0], buffer[i + 3] - off[1]];
-            if (!bFirst) {
-                const interA = getIntersection(prevA[0], prevA[1], p0a, p1a);
-                if (interA) {
-                    solidified.unshift(interA[1]);
-                    solidified.unshift(interA[0]);
-                }
-                const interB = getIntersection(prevB[0], prevB[1], p0b, p1b);
-                if (interB) {
-                    solidified.push(interB[0]);
-                    solidified.push(interB[1]);
-                }
-            }
-            if (bFirst) {
-                solidified.unshift(p0a[1]);
-                solidified.unshift(p0a[0]);
-                solidified.push(p0b[0]);
-                solidified.push(p0b[1]);
-            }
-            if (bLast) {
-                solidified.unshift(p1a[1]);
-                solidified.unshift(p1a[0]);
-                solidified.push(p1b[0]);
-                solidified.push(p1b[1]);
-            }
-            if (!bLast) {
-                prevA = [p0a, p1a];
-                prevB = [p0b, p1b];
-            }
-        }
-        return Float32Array.from(solidified);
-    }
-}
-exports.Line = Line;
-Line.buffer = [-1, 0, 1, 0];
-//# sourceMappingURL=Line.js.map
-
-/***/ }),
-/* 39 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_362414__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Triangle = void 0;
-const Adapt_1 = __nested_webpack_require_362414__(28);
-const ShapeBuffer_1 = __nested_webpack_require_362414__(35);
-/**
- * Triangle ShapeBuffer
- *
- * @category Core.Primitives
- */
-class Triangle extends ShapeBuffer_1.ShapeBuffer {
-    /**
-     * Creates an instance of Triangleeee.
-     *
-     * @param {ShapeBaseSettings} [settings={}]
-     * @memberof Triangle
-     */
-    constructor(settings = {}) {
-        settings.type = 'Triangle';
-        settings.shape = Triangle.buffer;
-        settings.adaptMode = Adapt_1.EAdaptMode.None;
-        super(settings);
-    }
-}
-exports.Triangle = Triangle;
-Triangle.buffer = [1, 0, -1, 1, -1, -1];
-//# sourceMappingURL=Triangle.js.map
-
-/***/ }),
-/* 40 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_363258__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Rect = void 0;
-const Adapt_1 = __nested_webpack_require_363258__(28);
-const ShapeBuffer_1 = __nested_webpack_require_363258__(35);
-/**
- *
- * @category Core.Primitives
- * @class Rect
- * @extends {ShapeBuffer}
- */
-class Rect extends ShapeBuffer_1.ShapeBuffer {
-    /**
-     * Creates an instance of Rect.
-     *
-     * @param {ShapeBaseSettings} [settings={}]
-     * @memberof Rect
-     */
-    constructor(settings = {}) {
-        settings.type = 'Rect';
-        settings.shape = Rect.buffer;
-        settings.adaptMode = Adapt_1.EAdaptMode.None;
-        super(settings);
-    }
-}
-exports.Rect = Rect;
-Rect.buffer = [1, 1, -1, 1, -1, -1, 1, -1];
-//# sourceMappingURL=Rect.js.map
-
-/***/ }),
-/* 41 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_364083__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Polygon = void 0;
-const math_1 = __nested_webpack_require_364083__(27);
-const ShapeLoop_1 = __nested_webpack_require_364083__(34);
-/**
- * Polygon shape
- *
- * @category Core.Primitives
- * @class Polygon
- * @extends {ShapeLoop}
- */
-class Polygon extends ShapeLoop_1.ShapeLoop {
-    /**
-     * Is based on ShapeLoop and you can pass `sideNumber` property to define
-     * a number of sides.
-     *
-     * @param settings
-     */
-    constructor(settings = {}) {
-        settings.type = settings.type || 'Polygon';
-        settings.loopDependencies = (settings.loopDependencies || []).concat(['sideNumber']);
-        super(settings, true);
-        this.props.sideNumber = settings.sideNumber;
-        this.loop = {
-            start: 0,
-            end: math_1.PI2,
-            inc: (propArguments) => {
-                return math_1.PI2 / this.getProp('sideNumber', propArguments, 5);
-            },
-            vertex: shapeLoopRepetition => {
-                return [Math.cos(shapeLoopRepetition.current), Math.sin(shapeLoopRepetition.current)];
-            },
-        };
-        this.bStaticLoop = this.isStaticLoop();
-        this.bStatic = this.isStatic();
-        this.bStaticIndexed = this.isStaticIndexed();
-    }
-}
-exports.Polygon = Polygon;
-//# sourceMappingURL=Polygon.js.map
-
-/***/ }),
 /* 42 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_365516__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Circle = void 0;
-const math_1 = __nested_webpack_require_365516__(27);
-const ShapeLoop_1 = __nested_webpack_require_365516__(34);
-/**
- *
- * @category Core.Primitives
- * @class Circle
- * @extends {ShapeLoop}
- */
-class Circle extends ShapeLoop_1.ShapeLoop {
-    /**
-     * Based on ShapeLoop, the number of point (resolution) is based on sideLength.
-     *
-     * @param {ShapeLoopSettings} [settings={}]
-     * @memberof Circle
-     */
-    constructor(settings = {}) {
-        settings.type = 'Circle';
-        super(settings, true);
-        this.loop = {
-            start: 0,
-            end: math_1.PI2,
-            inc: propArguments => {
-                const sideLength = this.getRepetitionSideLength(propArguments);
-                return (1 / Math.pow(sideLength[0] * sideLength[1], 0.25)) * ShapeLoop_1.ShapeLoop.PId2;
-            },
-            vertex: shapeLoopRepetition => [Math.cos(shapeLoopRepetition.current), Math.sin(shapeLoopRepetition.current)],
-        };
-        this.bStaticLoop = this.isStaticLoop();
-        this.bStatic = this.isStatic();
-        this.bStaticIndexed = this.isStaticIndexed();
-    }
-}
-exports.Circle = Circle;
-//# sourceMappingURL=Circle.js.map
-
-/***/ }),
-/* 43 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_366851__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Star = void 0;
-const math_1 = __nested_webpack_require_366851__(27);
-const ShapeLoop_1 = __nested_webpack_require_366851__(34);
-/**
- * Polygon shape
- *
- * @category Core.Primitives
- * @class Polygon
- * @extends {ShapeLoop}
- */
-class Star extends ShapeLoop_1.ShapeLoop {
-    /**
-     * Is based on ShapeLoop and you can pass `spikes` property to define
-     * a number of spikes and `innerRadius`
-     *
-     * @param settings
-     */
-    constructor(settings = {}) {
-        settings.type = settings.type || 'Polygon';
-        settings.loopDependencies = (settings.loopDependencies || []).concat(['spikes', 'innerRadius']);
-        super(settings, true);
-        this.props.spikes = settings.spikes;
-        this.props.innerRadius = settings.innerRadius;
-        this.loop = {
-            start: 0,
-            end: math_1.PI2,
-            inc: (propArguments) => {
-                // dyamic binding in `generateLoopBuffer`
-                return this.inc;
-            },
-            vertex: shapeLoopRepetition => {
-                const angle = (Math.PI / this.spikes) * shapeLoopRepetition.index;
-                const radius = shapeLoopRepetition.index % 2 === 0 ? 1 : this.innerRadius;
-                return [Math.cos(angle) * radius, Math.sin(angle) * radius];
-            },
-        };
-        this.bStaticLoop = this.isStaticLoop();
-        this.bStatic = this.isStatic();
-        this.bStaticIndexed = this.isStaticIndexed();
-    }
-    generateLoopBuffer(propArguments) {
-        this.spikes = this.getProp('spikes', propArguments, 5);
-        this.innerRadius = this.getProp('innerRadius', propArguments, 0.5);
-        this.inc = Math.PI / this.spikes;
-        return super.generateLoopBuffer(propArguments);
-    }
-}
-exports.Star = Star;
-//# sourceMappingURL=Star.js.map
-
-/***/ }),
-/* 44 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_368782__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Rose = void 0;
-const math_1 = __nested_webpack_require_368782__(27);
-const ShapeLoop_1 = __nested_webpack_require_368782__(34);
-/**
- * Rose shape
- *
- * @category Core.Primitives
- * @class Rose
- * @extends {ShapeLoop}
- */
-class Rose extends ShapeLoop_1.ShapeLoop {
-    /**
-     * Creates an instance of Rose.
-     *
-     * @param {IRoseSettings} [settings={}]
-     * @memberof Rose
-     */
-    constructor(settings = {}) {
-        var _a, _b;
-        settings.type = 'Rose';
-        settings.loopDependencies = (settings.loopDependencies || []).concat(['n', 'd']);
-        super(settings, true);
-        this.props.n = (_a = settings.n) !== null && _a !== void 0 ? _a : 1;
-        this.props.d = (_b = settings.d) !== null && _b !== void 0 ? _b : 2;
-        this.loop = {
-            start: 0,
-            end: (propArguments) => Rose.getFinalAngleFromK(this.getProp('n', propArguments), this.getProp('d', propArguments)),
-            inc: (propArguments) => {
-                const n = this.getProp('n', propArguments);
-                const d = this.getProp('d', propArguments);
-                const sideLength = this.getRepetitionSideLength(propArguments);
-                const sides = Math.pow(sideLength[0] * sideLength[1], 0.45);
-                const k = d < n ? n / d : 1.5;
-                return math_1.PI2 / (sides * k);
-            },
-            vertex: (shapeLoopRepetition) => {
-                const f = Math.cos(this.k * shapeLoopRepetition.current);
-                return [f * Math.cos(shapeLoopRepetition.current), f * Math.sin(shapeLoopRepetition.current)];
-            },
-        };
-        this.bStaticLoop = this.isStaticLoop();
-        this.bStatic = this.isStatic();
-        this.bStaticIndexed = this.isStaticIndexed();
-    }
-    generateLoopBuffer(propArguments) {
-        this.k = this.getProp('n', propArguments) / this.getProp('d', propArguments);
-        return super.generateLoopBuffer(propArguments);
-    }
-    /**
-     * Return end angle of rose
-     *
-     * @static
-     * @param {number} n
-     * @param {number} d
-     * @returns {number}
-     * @memberof Rose
-     */
-    static getFinalAngleFromK(n, d) {
-        if (n == d)
-            return math_1.PI2;
-        const k = n / d;
-        const p = n * d;
-        if (!Number.isInteger(k) && k % 0.5 == 0)
-            return 4 * Math.PI;
-        return Math.PI * d * (p % 2 == 0 ? 2 : 1);
-    }
-}
-exports.Rose = Rose;
-//# sourceMappingURL=Rose.js.map
-
-/***/ }),
-/* 45 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_371374__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Spiral = void 0;
-const math_1 = __nested_webpack_require_371374__(27);
-const ShapeLoop_1 = __nested_webpack_require_371374__(34);
-/**
- * Spiral shape
- *
- * @category Core.Primitives
- * @class Spiral
- * @extends {ShapeLoop}
- */
-class Spiral extends ShapeLoop_1.ShapeLoop {
-    /**
-     * Creates an instance of Spiral.
-     *
-     * @param {SpiralSettings} [settings={}]
-     * @memberof Spiral
-     */
-    constructor(settings = {}) {
-        var _a, _b, _c;
-        settings.type = 'Spiral';
-        settings.bClosed = false;
-        settings.loopDependencies = (settings.loopDependencies || []).concat(['twists', 'twistsStart', 'spiral']);
-        super(settings, true);
-        this.props.spiral = (_a = settings.spiral) !== null && _a !== void 0 ? _a : Spiral.types.ARCHIMEDE;
-        this.props.twists = (_b = settings.twists) !== null && _b !== void 0 ? _b : 2;
-        this.props.twistsStart = (_c = settings.twistsStart) !== null && _c !== void 0 ? _c : 0;
-        this.loop = {
-            start: (propArguments) => math_1.PI2 * this.getProp('twistsStart', propArguments),
-            end: (propArguments) => math_1.PI2 *
-                (this.getProp('twistsStart', propArguments) + this.getProp('twists', propArguments)),
-            inc: (propArguments) => {
-                const twists = this.getProp('twists', propArguments);
-                const rep = math_1.PI2 * twists;
-                const sideLength = this.getRepetitionSideLength(propArguments);
-                const radius = 4 + Math.sqrt(sideLength[0] * sideLength[1]);
-                return rep / (radius * twists);
-            },
-            vertex: (shapeLoopRepetition) => {
-                const r = this.r(shapeLoopRepetition.current);
-                return [r * Math.cos(shapeLoopRepetition.current), r * Math.sin(shapeLoopRepetition.current)];
-            },
-        };
-        this.bStaticLoop = this.isStaticLoop();
-        this.bStatic = this.isStatic();
-        this.bStaticIndexed = this.isStaticIndexed();
-    }
-    generateLoopBuffer(propArguments) {
-        this.spiral = this.getProp('spiral', propArguments);
-        this.r = Spiral.getRFromTSpiralType(this.spiral);
-        return super.generateLoopBuffer(propArguments);
-    }
-    /**
-     * Point position and scale factor for spiral types
-     *
-     * @static
-     * @param {TSpiralType} spiral
-     * @returns {number}
-     * @memberof Spiral
-     */
-    static getRFromTSpiralType(spiral) {
-        switch (spiral) {
-            case Spiral.types.ARCHIMEDE:
-                return angle => angle / 10;
-            case Spiral.types.HYPERBOLIC:
-                return angle => (1 / angle) * 3;
-            case Spiral.types.FERMAT:
-                return angle => angle ** 0.5 / 3;
-            case Spiral.types.LITUUS:
-                return angle => angle ** -0.5;
-            case Spiral.types.LOGARITHMIC:
-                return angle => Math.E ** (angle * 0.2) / 10;
-        }
-        return angle => angle;
-    }
-}
-exports.Spiral = Spiral;
-/**
- * Spural types
- *
- * @static
- * @type {{ [name in TSpiralType]: TSpiralType }}
- * @memberof Spiral
- */
-Spiral.types = {
-    ARCHIMEDE: 'ARCHIMEDE',
-    HYPERBOLIC: 'HYPERBOLIC',
-    FERMAT: 'FERMAT',
-    LITUUS: 'LITUUS',
-    LOGARITHMIC: 'LOGARITHMIC',
-};
-//# sourceMappingURL=Spiral.js.map
-
-/***/ }),
-/* 46 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_374819__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Lissajous = void 0;
-const math_1 = __nested_webpack_require_374819__(27);
-const ShapeLoop_1 = __nested_webpack_require_374819__(34);
-/**
- * Lissajous shape
- *
- * @category Core.Primitives
- * @class Lissajous
- * @extends {ShapeLoop}
- */
-class Lissajous extends ShapeLoop_1.ShapeLoop {
-    /**
-     * Creates an instance of Lissajous.
-     *
-     * @param {ILissajousSettings} [settings={}]
-     * @memberof Lissajous
-     */
-    constructor(settings = {}) {
-        settings.type = 'Lissajous';
-        settings.loopDependencies = (settings.loopDependencies || []).concat(['wx', 'wy', 'wz']);
-        super(settings, true);
-        this.props.wx = settings.wx || 1;
-        this.props.wy = settings.wy || 2;
-        this.props.wz = settings.wz || 0;
-        this.loop = {
-            start: 0,
-            end: math_1.PI2,
-            inc: propArguments => {
-                const wx = this.getProp('wx', propArguments);
-                const wy = this.getProp('wy', propArguments);
-                const ratio = wx == wy ? ShapeLoop_1.ShapeLoop.PId2 : 0.5 - Math.min(49, wx + wy) * 0.01;
-                const sideLength = this.getRepetitionSideLength(propArguments);
-                return (1 / Math.pow(sideLength[0] * sideLength[1], 0.25)) * ratio;
-            },
-            vertex: (shapeLoopRepetition) => {
-                return this.wx === this.wy
-                    ? [Math.cos(shapeLoopRepetition.current + this.wz), Math.sin(shapeLoopRepetition.current)]
-                    : [Math.cos(this.wx * shapeLoopRepetition.current + this.wz), Math.sin(this.wy * shapeLoopRepetition.current)];
-            },
-        };
-        this.bStaticLoop = this.isStaticLoop();
-        this.bStatic = this.isStatic();
-        this.bStaticIndexed = this.isStaticIndexed();
-    }
-    generateLoopBuffer(propArguments) {
-        this.wx = this.getProp('wx', propArguments, 1);
-        this.wy = this.getProp('wy', propArguments, 2);
-        this.wz = this.getProp('wz', propArguments, 2);
-        return super.generateLoopBuffer(propArguments);
-    }
-}
-exports.Lissajous = Lissajous;
-//# sourceMappingURL=Lissajous.js.map
-
-/***/ }),
-/* 47 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_377083__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SuperShape = void 0;
-const math_1 = __nested_webpack_require_377083__(27);
-const ShapeLoop_1 = __nested_webpack_require_377083__(34);
-/**
- * ShperShape
- *
- * @category Core.Primitives
- * @class SuperShape
- * @extends {ShapeLoop}
- */
-class SuperShape extends ShapeLoop_1.ShapeLoop {
-    /**
-     * Creates an instance of SuperShape.
-     *
-     * @param {ISuperShapeSettings} [settings={}]
-     * @memberof SuperShape
-     */
-    constructor(settings = {}) {
-        var _a, _b, _c, _d, _e, _f;
-        settings.type = 'SuperShape';
-        settings.loopDependencies = (settings.loopDependencies || []).concat(['a', 'b', 'm', 'n1', 'n2', 'n3']);
-        super(settings, true);
-        this.props.a = (_a = settings.a) !== null && _a !== void 0 ? _a : 1;
-        this.props.b = (_b = settings.b) !== null && _b !== void 0 ? _b : 1;
-        this.props.m = (_c = settings.m) !== null && _c !== void 0 ? _c : 6;
-        this.props.n1 = (_d = settings.n1) !== null && _d !== void 0 ? _d : 1;
-        this.props.n2 = (_e = settings.n2) !== null && _e !== void 0 ? _e : 1;
-        this.props.n3 = (_f = settings.n3) !== null && _f !== void 0 ? _f : 1;
-        this.loop = {
-            start: 0,
-            end: math_1.PI2,
-            inc: propArguments => {
-                const sideLength = this.getRepetitionSideLength(propArguments);
-                return Math.PI / Math.pow(sideLength[0] * sideLength[1], 0.5);
-            },
-            vertex: (shapeLoopRepetition) => {
-                const angle = shapeLoopRepetition.current;
-                const m = (this.m * angle) / 4;
-                const a = Math.abs(Math.cos(m) / this.a) ** this.n2;
-                const b = Math.abs(Math.sin(m) / this.b) ** this.n3;
-                const raux = (a + b) ** (1 / this.n1);
-                const r = raux === 0 ? 1 : 1 / raux;
-                return [r * Math.cos(angle), r * Math.sin(angle)];
-            },
-        };
-        this.bStaticLoop = this.isStaticLoop();
-        this.bStatic = this.isStatic();
-        this.bStaticIndexed = this.isStaticIndexed();
-    }
-    generateLoopBuffer(propArguments) {
-        this.a = this.getProp('a', propArguments);
-        this.b = this.getProp('b', propArguments);
-        this.m = this.getProp('m', propArguments);
-        this.n1 = this.getProp('n1', propArguments);
-        this.n2 = this.getProp('n2', propArguments);
-        this.n3 = this.getProp('n3', propArguments);
-        return super.generateLoopBuffer(propArguments);
-    }
-}
-exports.SuperShape = SuperShape;
-//# sourceMappingURL=SuperShape.js.map
-
-/***/ }),
-/* 48 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_379788__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Modifiers = void 0;
-const Adapt_1 = __nested_webpack_require_379788__(28);
-const Mirror_1 = __nested_webpack_require_379788__(49);
-const Smooth_1 = __nested_webpack_require_379788__(50);
-const Solidify_1 = __nested_webpack_require_379788__(52);
-const Subdivide_1 = __nested_webpack_require_379788__(53);
-const Close_1 = __nested_webpack_require_379788__(51);
-const Offset_1 = __nested_webpack_require_379788__(54);
-const Modifiers = {
-    Adapt: Adapt_1.Adapt,
-    Mirror: Mirror_1.Mirror,
-    Smooth: Smooth_1.Smooth,
-    Solidify: Solidify_1.Solidify,
-    Subdivide: Subdivide_1.Subdivide,
-    Close: Close_1.Close,
-    Offset: Offset_1.Offset,
-};
-exports.Modifiers = Modifiers;
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-/* 49 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_380582__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Mirror = void 0;
-const Modifier_1 = __nested_webpack_require_380582__(29);
-class Mirror extends Modifier_1.Modifier {
-    constructor(args = { x: true, y: true }) {
-        super();
-        this.x = args.x === true;
-        this.y = args.y === true;
-    }
-    apply(buffer, bClosed) {
-        const bufferLength = buffer.length;
-        const mirror = new Float32Array(bufferLength * (this.x ? 2 : 1) * (this.y ? 2 : 1));
-        const sideLengthX = 1;
-        const sideLengthY = 1;
-        if (this.x && this.y) {
-            const bufferLengthX2 = bufferLength + bufferLength;
-            const bufferLengthX3 = bufferLengthX2 + bufferLength;
-            // |1|2|
-            // |4|3|
-            for (let i = 0; i < bufferLength; i += 2) {
-                mirror[i] = buffer[i] - sideLengthX;
-                mirror[i + 1] = buffer[i + 1] - sideLengthY;
-                mirror[bufferLength + i] = buffer[bufferLength - 2 - i] * -1 + sideLengthX;
-                mirror[bufferLength + i + 1] = buffer[bufferLength - 2 - i + 1] - sideLengthY;
-                mirror[bufferLengthX2 + i] = buffer[i] * -1 + sideLengthX;
-                mirror[bufferLengthX2 + i + 1] = buffer[i + 1] * -1 + sideLengthY;
-                mirror[bufferLengthX3 + i] = buffer[bufferLength - 2 - i] - sideLengthX;
-                mirror[bufferLengthX3 + i + 1] = buffer[bufferLength - 2 - i + 1] * -1 + sideLengthY;
-            }
-        }
-        else if (this.x) {
-            for (let i = 0; i < bufferLength; i += 2) {
-                mirror[i] = buffer[i] - sideLengthX;
-                mirror[i + 1] = buffer[i + 1];
-                mirror[bufferLength + i] = buffer[bufferLength - 2 - i] * -1 + sideLengthX;
-                mirror[bufferLength + i + 1] = buffer[bufferLength - 2 - i + 1];
-            }
-        }
-        else if (this.y) {
-            for (let i = 0; i < bufferLength; i += 2) {
-                mirror[i] = buffer[i];
-                mirror[i + 1] = buffer[i + 1] - sideLengthY;
-                mirror[bufferLength + i] = buffer[bufferLength - 2 - i];
-                mirror[bufferLength + i + 1] = buffer[bufferLength - 2 - i + 1] * -1 + sideLengthY;
-            }
-        }
-        else {
-            return buffer;
-        }
-        return mirror;
-    }
-}
-exports.Mirror = Mirror;
-//# sourceMappingURL=Mirror.js.map
-
-/***/ }),
-/* 50 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_383066__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Smooth = void 0;
-const Utilities_1 = __nested_webpack_require_383066__(30);
-const Close_1 = __nested_webpack_require_383066__(51);
-const Modifier_1 = __nested_webpack_require_383066__(29);
-class Smooth extends Modifier_1.Modifier {
-    constructor(args = {}) {
-        super();
-        this.level = args.level || 1;
-        const tension = Array.isArray(args.tension) ? args.tension : [args.tension];
-        this.tension = new Array(this.level).fill(0.5).map((v, i) => Utilities_1.clamp(0, 1, tension[i] || v));
-        this.level = this.level < 1 ? 1 : this.level;
-        this.closed = args.closed === true;
-    }
-    apply(buffer, bClosed) {
-        if (bClosed && !Close_1.Close.isClosed(buffer)) {
-            const bufferLen = buffer.length;
-            const mofified = new Float32Array(bufferLen + 2);
-            mofified.set(buffer, 0);
-            mofified[bufferLen] = buffer[0];
-            mofified[bufferLen + 1] = buffer[1];
-            buffer = mofified;
-        }
-        let smoothed = buffer;
-        for (let i = 0, len = this.level; i < len; i++)
-            smoothed = Smooth.smooth(smoothed, this.tension[i], bClosed || this.closed);
-        return smoothed;
-    }
-    /**
-     * Chaikin smooth
-     *
-     * the tension factor defines a scale between corner cutting distance in segment half length,
-     * i.e. between 0.05 and 0.45. The opposite corner will be cut by the inverse
-     * (i.e. 1-cutting distance) to keep symmetry.
-     * with a tension value of 0.5 this amounts to 0.25 = 1/4 and 0.75 = 3/4,
-     * the original Chaikin values
-     *
-     * @link https://www.codeproject.com/Articles/1093960/D-Polyline-Vertex-Smoothing
-     * @param buffer
-     */
-    static smooth(buffer, tension = 0.5, bClosed = false) {
-        const bufferLength = buffer.length;
-        const smoothed = new Float32Array((buffer.length - (bClosed ? 1 : 0)) * 2);
-        if (!bClosed) {
-            smoothed[0] = buffer[0];
-            smoothed[1] = buffer[1];
-        }
-        const cutdist = 0.05 + tension * 0.4;
-        const ncutdist = 1 - cutdist;
-        let smoothedLength = bClosed ? 0 : 2;
-        for (let i = 0, len = bufferLength - 2; i < len; i += 2, smoothedLength += 4) {
-            // q
-            smoothed[smoothedLength] = ncutdist * buffer[i] + cutdist * buffer[i + 2];
-            smoothed[smoothedLength + 1] = ncutdist * buffer[i + 1] + cutdist * buffer[i + 3];
-            // r
-            smoothed[smoothedLength + 2] = cutdist * buffer[i] + ncutdist * buffer[i + 2];
-            smoothed[smoothedLength + 3] = cutdist * buffer[i + 1] + ncutdist * buffer[i + 3];
-        }
-        if (!bClosed) {
-            smoothed[smoothedLength] = buffer[bufferLength - 2];
-            smoothed[smoothedLength + 1] = buffer[bufferLength - 1];
-        }
-        else {
-            smoothed[smoothedLength] = smoothed[0];
-            smoothed[smoothedLength + 1] = smoothed[1];
-        }
-        return smoothed;
-    }
-}
-exports.Smooth = Smooth;
-//# sourceMappingURL=Smooth.js.map
-
-/***/ }),
-/* 51 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_386214__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Close = void 0;
-const Modifier_1 = __nested_webpack_require_386214__(29);
-class Close extends Modifier_1.Modifier {
-    constructor() {
-        super();
-    }
-    apply(buffer, bClosed, shape) {
-        return Close.call(buffer);
-    }
-    static call(buffer) {
-        const len = buffer.length;
-        if (Close.isClosed(buffer))
-            return buffer;
-        const result = new Float32Array(len + 2);
-        result.set(buffer, 0);
-        result[len] = result[0];
-        result[len + 1] = result[1];
-        return result;
-    }
-    static isClosed(buffer) {
-        const len = buffer.length;
-        return buffer[0] === buffer[len - 2] && buffer[1] === buffer[len - 1];
-    }
-}
-exports.Close = Close;
-//# sourceMappingURL=Close.js.map
-
-/***/ }),
-/* 52 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_387126__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Solidify = void 0;
-const Modifier_1 = __nested_webpack_require_387126__(29);
-class Solidify extends Modifier_1.Modifier {
-    constructor(args = {}) {
-        super();
-        this.closed = args.closed === true;
-        this.thickness = args.thickness || 0.2;
-        this.error = args.error;
-    }
-    apply(buffer, bClosed) {
-        return Solidify.solidify(buffer, this.thickness, this.closed, this.error);
-    }
-    /**
-     * @link https://gist.github.com/kekscom/4194148
-     */
-    static solidify(buffer, thickness, bClosed = false, error) {
-        const solidified = [];
-        thickness = typeof thickness === 'number' ? [thickness] : thickness;
-        const thicknessLength = thickness.length;
-        let bFirst, bLast, prevA = [
-            [0, 0],
-            [0, 0],
-        ], prevB = [
-            [0, 0],
-            [0, 0],
-        ];
-        for (let i = 0, t = 0, len = buffer.length - 2; i < len; i += 2, t++) {
-            bFirst = i === 0;
-            bLast = i === len - 2;
-            const currentThicknessRep = {
-                index: i + 1,
-                offset: i / len,
-                count: len,
-            };
-            const nextThicknessRep = {
-                index: i + 2,
-                offset: (i + 1) / len,
-                count: len,
-            };
-            const currentThickness = typeof thickness === 'function' ? thickness(currentThicknessRep) : thickness[t % thicknessLength];
-            const nextThickness = typeof thickness === 'function' ? thickness(nextThicknessRep) : thickness[(t + 1) % thicknessLength];
-            const off = Solidify.getOffsets(buffer[i], buffer[i + 1], buffer[i + 2], buffer[i + 3], currentThickness);
-            const off2 = Solidify.getOffsets(buffer[i], buffer[i + 1], buffer[i + 2], buffer[i + 3], nextThickness);
-            const p0a = [buffer[i] + off[0], buffer[i + 1] + off[1]];
-            const p1a = [buffer[i + 2] + off2[0], buffer[i + 3] + off2[1]];
-            const p0b = [buffer[i] - off[0], buffer[i + 1] - off[1]];
-            const p1b = [buffer[i + 2] - off2[0], buffer[i + 3] - off2[1]];
-            if (!bFirst) {
-                const interA = Solidify.getIntersection(prevA[0], prevA[1], p0a, p1a, error);
-                if (interA) {
-                    solidified.unshift(interA[1]);
-                    solidified.unshift(interA[0]);
-                }
-                const interB = Solidify.getIntersection(prevB[0], prevB[1], p0b, p1b, error);
-                if (interB) {
-                    solidified.push(interB[0]);
-                    solidified.push(interB[1]);
-                }
-            }
-            if (bFirst) {
-                solidified.unshift(p0a[1]);
-                solidified.unshift(p0a[0]);
-                solidified.push(p0b[0]);
-                solidified.push(p0b[1]);
-            }
-            if (bLast) {
-                solidified.unshift(p1a[1]);
-                solidified.unshift(p1a[0]);
-                solidified.push(p1b[0]);
-                solidified.push(p1b[1]);
-            }
-            if (!bLast) {
-                prevA = [p0a, p1a];
-                prevB = [p0b, p1b];
-            }
-        }
-        if (bClosed) {
-            const centerIndex = buffer.length - 2;
-            const lastIndex = solidified.length - 2;
-            const x = 0.5 * solidified[0] + solidified[centerIndex] * 0.5;
-            const y = 0.5 * solidified[1] + solidified[centerIndex + 1] * 0.5;
-            const x2 = 0.5 * solidified[centerIndex + 2] + solidified[lastIndex] * 0.5;
-            const y2 = 0.5 * solidified[centerIndex + 3] + solidified[lastIndex + 1] * 0.5;
-            solidified[0] = x;
-            solidified[1] = y;
-            solidified[centerIndex] = x;
-            solidified[centerIndex + 1] = y;
-            solidified[centerIndex + 2] = x2;
-            solidified[centerIndex + 3] = y2;
-            solidified[lastIndex] = x2;
-            solidified[lastIndex + 1] = y2;
-        }
-        return Float32Array.from(solidified);
-    }
-    static getOffsets(ax, ay, bx, by, thickness) {
-        const dx = bx - ax, dy = by - ay, len = Math.sqrt(dx * dx + dy * dy), scale = thickness / (2 * len);
-        return [-scale * dy, scale * dx];
-    }
-    static getIntersection(a1, b1, a2, b2, error = 0.00001) {
-        // directional constants
-        const k1 = (b1[1] - a1[1]) / (b1[0] - a1[0]), k2 = (b2[1] - a2[1]) / (b2[0] - a2[0]);
-        // if the directional constants are equal, the lines are parallel
-        // if (Math.abs(k1 - k2) < 0.00001) {
-        if (Math.abs(k1 - k2) < error) {
-            return;
-        }
-        // y offset constants for both lines
-        const m1 = a1[1] - k1 * a1[0];
-        const m2 = a2[1] - k2 * a2[0];
-        // compute x
-        const x = (m1 - m2) / (k2 - k1);
-        // use y = k * x + m to get y coordinate
-        const y = k1 * x + m1;
-        return [x, y];
-    }
-}
-exports.Solidify = Solidify;
-//# sourceMappingURL=Solidify.js.map
-
-/***/ }),
-/* 53 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_392252__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Subdivide = void 0;
-const Modifier_1 = __nested_webpack_require_392252__(29);
-class Subdivide extends Modifier_1.Modifier {
-    constructor(args = {}) {
-        super();
-        this.level = args.level || 1;
-        this.level = this.level < 1 ? 1 : this.level;
-    }
-    apply(buffer, bClosed) {
-        const level = this.level;
-        let subdivided = buffer;
-        if (subdivided && subdivided.length > 0) {
-            for (let i = 0; i < level; i++)
-                subdivided = Subdivide.subdivide(subdivided, bClosed);
-        }
-        return subdivided;
-    }
-    /**
-     * Subdivide buffer
-     *
-     * @static
-     * @param {Float32Array} shape
-     * @param {boolean} [bClosed=true]
-     * @returns {(Float32Array)}
-     */
-    static subdivide(buffer, bClosed = false) {
-        const bufferLength = buffer.length;
-        const subdivided = new Float32Array(bufferLength * 2 - (bClosed ? 0 : 2));
-        for (let i = 0; i < bufferLength; i += 2) {
-            if (i === 0) {
-                subdivided[0] = buffer[0];
-                subdivided[1] = buffer[1];
-            }
-            else {
-                const px = buffer[i - 2];
-                const py = buffer[i - 1];
-                const x = buffer[i];
-                const y = buffer[i + 1];
-                const nx = (x + px) / 2;
-                const ny = (y + py) / 2;
-                subdivided[(i - 1) * 2] = nx;
-                subdivided[(i - 1) * 2 + 1] = ny;
-                subdivided[i * 2] = x;
-                subdivided[i * 2 + 1] = y;
-            }
-        }
-        if (bClosed) {
-            subdivided[(bufferLength - 1) * 2] = (buffer[0] + buffer[bufferLength - 2]) / 2;
-            subdivided[(bufferLength - 1) * 2 + 1] = (buffer[1] + buffer[bufferLength - 1]) / 2;
-        }
-        return subdivided;
-    }
-}
-exports.Subdivide = Subdivide;
-//# sourceMappingURL=Subdivide.js.map
-
-/***/ }),
-/* 54 */
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_394303__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Offset = void 0;
-const Modifier_1 = __nested_webpack_require_394303__(29);
-class Offset extends Modifier_1.Modifier {
-    constructor(args = { from: 0, to: undefined }) {
-        super();
-        this.from = args.from;
-        this.to = args.to;
-    }
-    apply(buffer, bClosed) {
-        return buffer.subarray(this.from, this.to ? (this.to < 0 ? buffer.length + this.to : this.to) : undefined);
-    }
-}
-exports.Offset = Offset;
-//# sourceMappingURL=Offset.js.map
-
-/***/ })
-/******/ 	]);
-/************************************************************************/
-/******/ 	// The module cache
-/******/ 	var __webpack_module_cache__ = {};
-/******/ 	
-/******/ 	// The require function
-/******/ 	function __nested_webpack_require_395098__(moduleId) {
-/******/ 		// Check if module is in cache
-/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
-/******/ 		if (cachedModule !== undefined) {
-/******/ 			return cachedModule.exports;
-/******/ 		}
-/******/ 		// Create a new module (and put it into the cache)
-/******/ 		var module = __webpack_module_cache__[moduleId] = {
-/******/ 			// no module.id needed
-/******/ 			// no module.loaded needed
-/******/ 			exports: {}
-/******/ 		};
-/******/ 	
-/******/ 		// Execute the module function
-/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_395098__);
-/******/ 	
-/******/ 		// Return the exports of the module
-/******/ 		return module.exports;
-/******/ 	}
-/******/ 	
-/************************************************************************/
-/******/ 	/* webpack/runtime/define property getters */
-/******/ 	(() => {
-/******/ 		// define getter functions for harmony exports
-/******/ 		__nested_webpack_require_395098__.d = (exports, definition) => {
-/******/ 			for(var key in definition) {
-/******/ 				if(__nested_webpack_require_395098__.o(definition, key) && !__nested_webpack_require_395098__.o(exports, key)) {
-/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
-/******/ 				}
-/******/ 			}
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	(() => {
-/******/ 		__nested_webpack_require_395098__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/make namespace object */
-/******/ 	(() => {
-/******/ 		// define __esModule on exports
-/******/ 		__nested_webpack_require_395098__.r = (exports) => {
-/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 			}
-/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/************************************************************************/
-/******/ 	
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nested_webpack_require_395098__(0);
-/******/ 	
-/******/ 	return __webpack_exports__;
-/******/ })()
-;
-});
-//# sourceMappingURL=urpflanze.js.map
-
-/***/ }),
-/* 9 */
 /***/ ((module, exports, __webpack_require__) => {
 
 var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -21054,17 +19097,17 @@ else {}
 
 
 /***/ }),
-/* 10 */
+/* 43 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
 
-module.exports = __webpack_require__(11);
+module.exports = __webpack_require__(44);
 
 
 /***/ }),
-/* 11 */
+/* 44 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
@@ -21083,11 +19126,11 @@ module.exports = __webpack_require__(11);
 
 
 
-var pathParse      = __webpack_require__(12);
-var transformParse = __webpack_require__(13);
-var matrix         = __webpack_require__(14);
-var a2c            = __webpack_require__(15);
-var ellipse        = __webpack_require__(16);
+var pathParse      = __webpack_require__(45);
+var transformParse = __webpack_require__(46);
+var matrix         = __webpack_require__(47);
+var a2c            = __webpack_require__(48);
+var ellipse        = __webpack_require__(49);
 
 
 // Class constructor
@@ -21720,7 +19763,7 @@ module.exports = SvgPath;
 
 
 /***/ }),
-/* 12 */
+/* 45 */
 /***/ ((module) => {
 
 "use strict";
@@ -22038,14 +20081,14 @@ module.exports = function pathParse(svgPath) {
 
 
 /***/ }),
-/* 13 */
+/* 46 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
 
 
-var Matrix = __webpack_require__(14);
+var Matrix = __webpack_require__(47);
 
 var operations = {
   matrix: true,
@@ -22132,7 +20175,7 @@ module.exports = function transformParse(transformString) {
 
 
 /***/ }),
-/* 14 */
+/* 47 */
 /***/ ((module) => {
 
 "use strict";
@@ -22283,7 +20326,7 @@ module.exports = Matrix;
 
 
 /***/ }),
-/* 15 */
+/* 48 */
 /***/ ((module) => {
 
 "use strict";
@@ -22478,7 +20521,7 @@ module.exports = function a2c(x1, y1, x2, y2, fa, fs, rx, ry, phi) {
 
 
 /***/ }),
-/* 16 */
+/* 49 */
 /***/ ((module) => {
 
 "use strict";
@@ -22589,7 +20632,7 @@ module.exports = Ellipse;
 
 
 /***/ }),
-/* 17 */
+/* 50 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -22619,23 +20662,23 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "fromDefinition": () => (/* reexport safe */ _fromDefinition__WEBPACK_IMPORTED_MODULE_15__.fromDefinition),
 /* harmony export */   "fromTransformAttribute": () => (/* reexport safe */ _fromTransformAttribute__WEBPACK_IMPORTED_MODULE_16__.fromTransformAttribute)
 /* harmony export */ });
-/* harmony import */ var _applyToPoint__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(18);
-/* harmony import */ var _fromObject__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(19);
-/* harmony import */ var _fromString__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(20);
-/* harmony import */ var _identity__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(21);
-/* harmony import */ var _inverse__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(22);
-/* harmony import */ var _isAffineMatrix__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(23);
-/* harmony import */ var _rotate__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(25);
-/* harmony import */ var _scale__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(28);
-/* harmony import */ var _shear__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(29);
-/* harmony import */ var _skew__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(30);
-/* harmony import */ var _toString__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(31);
-/* harmony import */ var _transform__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(27);
-/* harmony import */ var _translate__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(26);
-/* harmony import */ var _fromTriangles__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(32);
-/* harmony import */ var _smoothMatrix__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(33);
-/* harmony import */ var _fromDefinition__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(34);
-/* harmony import */ var _fromTransformAttribute__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(35);
+/* harmony import */ var _applyToPoint__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(51);
+/* harmony import */ var _fromObject__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(52);
+/* harmony import */ var _fromString__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(53);
+/* harmony import */ var _identity__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(54);
+/* harmony import */ var _inverse__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(55);
+/* harmony import */ var _isAffineMatrix__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(56);
+/* harmony import */ var _rotate__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(58);
+/* harmony import */ var _scale__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(61);
+/* harmony import */ var _shear__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(62);
+/* harmony import */ var _skew__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(63);
+/* harmony import */ var _toString__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(64);
+/* harmony import */ var _transform__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(60);
+/* harmony import */ var _translate__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(59);
+/* harmony import */ var _fromTriangles__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(65);
+/* harmony import */ var _smoothMatrix__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(66);
+/* harmony import */ var _fromDefinition__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(67);
+/* harmony import */ var _fromTransformAttribute__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(68);
 
 
 
@@ -22656,7 +20699,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 /***/ }),
-/* 18 */
+/* 51 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -22695,7 +20738,7 @@ function applyToPoints (matrix, points) {
 
 
 /***/ }),
-/* 19 */
+/* 52 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -22722,7 +20765,7 @@ function fromObject (object) {
 
 
 /***/ }),
-/* 20 */
+/* 53 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -22760,7 +20803,7 @@ function fromString (string) {
 
 
 /***/ }),
-/* 21 */
+/* 54 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -22785,7 +20828,7 @@ function identity () {
 
 
 /***/ }),
-/* 22 */
+/* 55 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -22817,7 +20860,7 @@ function inverse (matrix) {
 
 
 /***/ }),
-/* 23 */
+/* 56 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -22825,7 +20868,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "isAffineMatrix": () => (/* binding */ isAffineMatrix)
 /* harmony export */ });
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(24);
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(57);
 
 
 /**
@@ -22852,7 +20895,7 @@ function isAffineMatrix (object) {
 
 
 /***/ }),
-/* 24 */
+/* 57 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -22885,7 +20928,7 @@ function matchesShape (obj, keys) {
 
 
 /***/ }),
-/* 25 */
+/* 58 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -22894,9 +20937,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "rotate": () => (/* binding */ rotate),
 /* harmony export */   "rotateDEG": () => (/* binding */ rotateDEG)
 /* harmony export */ });
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(24);
-/* harmony import */ var _translate__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(26);
-/* harmony import */ var _transform__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(27);
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(57);
+/* harmony import */ var _translate__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(59);
+/* harmony import */ var _transform__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(60);
 
 
 
@@ -22944,7 +20987,7 @@ function rotateDEG (angle, cx = undefined, cy = undefined) {
 
 
 /***/ }),
-/* 26 */
+/* 59 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -22971,7 +21014,7 @@ function translate (tx, ty = 0) {
 
 
 /***/ }),
-/* 27 */
+/* 60 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -23028,7 +21071,7 @@ function compose (...matrices) {
 
 
 /***/ }),
-/* 28 */
+/* 61 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -23036,9 +21079,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "scale": () => (/* binding */ scale)
 /* harmony export */ });
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(24);
-/* harmony import */ var _translate__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(26);
-/* harmony import */ var _transform__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(27);
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(57);
+/* harmony import */ var _translate__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(59);
+/* harmony import */ var _transform__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(60);
 
 
 
@@ -23076,7 +21119,7 @@ function scale (sx, sy = undefined, cx = undefined, cy = undefined) {
 
 
 /***/ }),
-/* 29 */
+/* 62 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -23103,7 +21146,7 @@ function shear (shx, shy) {
 
 
 /***/ }),
-/* 30 */
+/* 63 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -23144,7 +21187,7 @@ function skewDEG (ax, ay) {
 
 
 /***/ }),
-/* 31 */
+/* 64 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -23183,7 +21226,7 @@ function toString (matrix) {
 
 
 /***/ }),
-/* 32 */
+/* 65 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -23191,9 +21234,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "fromTriangles": () => (/* binding */ fromTriangles)
 /* harmony export */ });
-/* harmony import */ var _inverse__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(22);
-/* harmony import */ var _transform__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(27);
-/* harmony import */ var _smoothMatrix__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(33);
+/* harmony import */ var _inverse__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(55);
+/* harmony import */ var _transform__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(60);
+/* harmony import */ var _smoothMatrix__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(66);
 
 
 
@@ -23250,7 +21293,7 @@ function fromTriangles (t1, t2) {
 
 
 /***/ }),
-/* 33 */
+/* 66 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -23277,7 +21320,7 @@ function smoothMatrix (matrix, precision = 10000000000) {
 
 
 /***/ }),
-/* 34 */
+/* 67 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -23285,12 +21328,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "fromDefinition": () => (/* binding */ fromDefinition)
 /* harmony export */ });
-/* harmony import */ var _fromObject__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(19);
-/* harmony import */ var _translate__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(26);
-/* harmony import */ var _scale__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(28);
-/* harmony import */ var _rotate__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(25);
-/* harmony import */ var _skew__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(30);
-/* harmony import */ var _shear__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(29);
+/* harmony import */ var _fromObject__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(52);
+/* harmony import */ var _translate__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(59);
+/* harmony import */ var _scale__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(61);
+/* harmony import */ var _rotate__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(58);
+/* harmony import */ var _skew__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(63);
+/* harmony import */ var _shear__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(62);
 
 
 
@@ -23386,7 +21429,7 @@ function fromDefinition (definitionOrArrayOfDefinition) {
 
 
 /***/ }),
-/* 35 */
+/* 68 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -23394,7 +21437,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "fromTransformAttribute": () => (/* binding */ fromTransformAttribute)
 /* harmony export */ });
-/* harmony import */ var _fromTransformAttribute_autogenerated__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(36);
+/* harmony import */ var _fromTransformAttribute_autogenerated__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(69);
 
 
 /**
@@ -23420,7 +21463,7 @@ function fromTransformAttribute (transformString) {
 
 
 /***/ }),
-/* 36 */
+/* 69 */
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -24884,7 +22927,7 @@ function peg$parse(input, options) {
 
 
 /***/ }),
-/* 37 */
+/* 70 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -24988,7 +23031,7 @@ exports.conversion = conversion;
 //# sourceMappingURL=utilities.js.map
 
 /***/ }),
-/* 38 */
+/* 71 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
