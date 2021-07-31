@@ -1,5 +1,5 @@
 /*!
- * @license Urpflanze SVG Importer v"0.0.4"
+ * @license Urpflanze SVG Importer v"0.0.5"
  * urpflanze-svg-importer.js
  *
  * Github: https://github.com/urpflanze-org/svg-importer
