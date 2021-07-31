@@ -17,7 +17,7 @@ import { SVGImporter } from '@urpflanze/svg-importer'
 
 const scene = new Urpflanze.Scene()
 
-const imported = SVGImporter.parse(`<svg>...</svg>` /*, simplify = 0.01, sideLength: 50*/) // ShapeBuffer or Shape
+const imported = SVGImporter.parse(`<svg>...</svg>` /*, sideLength: 50, simplify = 0.01*/) // ShapeBuffer or Shape
 
 scene.add(imported)
 ```
