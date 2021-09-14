@@ -1,15 +1,16 @@
 {
 	"name": "@urpflanze/svg-importer",
-	"version": "0.0.2",
+	"version": "0.0.5",
 	"description": "Urpflanze package",
 	"license": "GPL-3.0-or-later",
-	"docs": "",
+	"docs": "https://github.com/urpflanze-org/svg-importer/blob/master/README.md",
 	"keywords": [
 		"urpflanze",
+		"svg",
 		"typescript"
 	],
-	"author": "",
-	"homepage": "",
+	"author": "Gennaro Bosone <gennaro.bs@gmail.com>",
+	"homepage": "https://github.com/urpflanze-org/svg-importer",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/urpflanze-org/svg-importer.git"
@@ -32,17 +33,20 @@
 			"url": "https://etherscan.io/address/0x9086c4bb7015c1d6dc79162d02e7e1239c982c01"
 		}
 	],
-	"main": "dist",
-	"types": "dist/index.d.ts",
+	"module": "build/esm/urpflanze-svg-importer.js",
+	"browser": "build/umd/urpflanze-svg-importer.js",
+	"main": "dist/cjs/index.js",
+	"types": "dist/cjs/index.d.ts",
 	"files": [
+		"build",
 		"dist",
 		"package.json",
 		"README.md",
 		"LICENSE"
 	],
 	"scripts": {
-		"build": "tsc",
-		"watch": "tsc --watch",
+		"build-browser": "npx webpack --config webpack.config.js",
+		"build": "tsc --p tsconfig.json && tsc --p tsconfig-esm.json && npm run build-browser",
 		"test": "tap",
 		"lint": "eslint src --ext .ts",
 		"prepublishOnly": "npm run build"
@@ -50,25 +54,23 @@
 	"publishConfig": {},
 	"dependencies": {
 		"@svgdotjs/svg.js": "^3.0.16",
-		"jsdom": "^16.5.2",
 		"simplify-js": "^1.2.4",
-		"svg-path-properties": "^1.0.11",
 		"svgdom": "^0.1.8",
 		"svgpath": "^2.3.1",
 		"transformation-matrix": "^2.7.0"
 	},
 	"devDependencies": {
-		"@types/jsdom": "^16.2.9",
-		"@types/xmldom": "^0.1.30",
 		"@types/tap": "^14.10.3",
 		"@typescript-eslint/eslint-plugin": "^4.16.1",
 		"eslint": "^7.21.0",
 		"eslint-config-prettier": "^8.1.0",
 		"tap": "^14.11.0",
-		"typescript": "4.2"
+		"typescript": "4.2",
+		"webpack": "^5.46.0",
+		"webpack-cli": "^4.7.2"
 	},
 	"peerDependencies": {
-		"@urpflanze/core": "^0.5.9",
-		"@urpflanze/color": "^0.0.5"
+		"@urpflanze/color": "0.0.5",
+		"@urpflanze/core": "^0.5.9"
 	}
 }

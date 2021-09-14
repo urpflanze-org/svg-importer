@@ -1,5 +1,4 @@
-import { IDrawerProps } from '@urpflanze/core'
-import { IPropArguments, TDrawerProp } from '@urpflanze/core/dist/types'
+import type { IDrawerProps, IPropArguments, TDrawerProp } from '@urpflanze/core'
 
 /**
  *
@@ -9,10 +8,10 @@ export interface ISVGParsed {
 	buffers: Array<ISVGParsedPath>
 }
 
-export interface ISVGDrawer extends IDrawerProps<IPropArguments> {
-	fill?: string
-	stroke?: string
-	lineWidth?: number
+export interface ISVGDrawer extends IDrawerProps {
+	fill?: TDrawerProp<string, IPropArguments>
+	stroke?: TDrawerProp<string, IPropArguments>
+	lineWidth?: TDrawerProp<number, IPropArguments>
 }
 
 /**
