@@ -8,7 +8,7 @@ import { Adapt } from '@urpflanze/core/dist/cjs/modifiers/Adapt'
 import { Shape } from '@urpflanze/core/dist/cjs/shapes/Shape'
 import { ShapeBuffer } from '@urpflanze/core/dist/cjs/shapes/ShapeBuffer'
 
-import simplify from 'simplify-js'
+import * as simplify from 'simplify-js'
 import * as svgpath from 'svgpath'
 import { compose, fromDefinition, fromTransformAttribute, toSVG } from 'transformation-matrix'
 
