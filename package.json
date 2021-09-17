@@ -1,6 +1,6 @@
 {
 	"name": "@urpflanze/svg-importer",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"description": "Urpflanze package",
 	"license": "GPL-3.0-or-later",
 	"docs": "https://github.com/urpflanze-org/svg-importer/blob/master/README.md",
@@ -53,7 +53,7 @@
 	},
 	"publishConfig": {},
 	"dependencies": {
-		"@svgdotjs/svg.js": "^3.0.16",
+		"@svgdotjs/svg.js": "^3.1.1",
 		"simplify-js": "^1.2.4",
 		"svgdom": "^0.1.8",
 		"svgpath": "^2.3.1",
