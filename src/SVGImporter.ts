@@ -321,8 +321,8 @@ class SVGImporter {
 			elements.map(SVGImporter.elementToPath)
 		)
 
-		let c_width = 0,
-			c_height = 0
+		let c_width = undefined,
+			c_height = undefined
 
 		for (let i = 0, len = paths.length; i < len; i++) {
 			const buffer = SVGImporter.pathToBuffer(paths[i], 1)
@@ -330,8 +330,8 @@ class SVGImporter {
 				const box = Adapt.getBounding(buffer)
 				box.width += box.x
 				box.height += box.y
-				if (box.width > c_width) c_width = box.width
-				if (box.height > c_height) c_height = box.height
+				if (typeof c_width === 'undefined' || box.width > c_width) c_width = box.width
+				if (typeof c_height === 'undefined' || box.height > c_height) c_height = box.height
 			}
 		}
 
