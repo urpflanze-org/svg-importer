@@ -124,7 +124,7 @@ class SVGImporter {
 				shape: buffer.buffer,
 				bClosed: buffer.bClosed,
 				sideLength,
-				drawer: buffer.drawer,
+				drawer: buffer.drawer
 			})
 			sb && shapes.push(sb)
 		})
@@ -222,8 +222,8 @@ class SVGImporter {
 				drawer: {
 					fill,
 					stroke,
-					lineWidth: lineWidth ? lineWidth / (h / 100) : undefined,
-				},
+					lineWidth: lineWidth ? lineWidth / (h / 100) : undefined
+				}
 			})
 		}
 
@@ -335,7 +335,7 @@ class SVGImporter {
 			}
 		}
 
-		return [0, 0, c_width, c_height]
+		return [0, 0, typeof c_width === 'undefined' ? 0 : c_width, typeof c_height === 'undefined' ? 0 : c_height]
 	}
 
 	/**
